@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "vendor.lineage.touch@1.0-service.oplus"
+#define LOG_TAG "vendor.xperience.touch@1.0-service.oplus"
 
 #include <android-base/file.h>
 #include <android-base/logging.h>
@@ -29,7 +29,7 @@ using ::android::base::Trim;
 namespace {}  // anonymous namespace
 
 namespace vendor {
-namespace lineage {
+namespace xperience {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -93,5 +93,5 @@ Return<bool> TouchscreenGesture::setGestureEnabled(const Gesture& gesture, bool 
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace lineage
+}  // namespace xperience
 }  // namespace vendor

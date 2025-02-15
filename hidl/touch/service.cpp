@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "vendor.lineage.touch@1.0-service.oplus"
+#define LOG_TAG "vendor.xperience.touch@1.0-service.oplus"
 
 #include <android-base/logging.h>
 #include <hidl/HidlTransportSupport.h>
@@ -25,10 +25,10 @@ using android::sp;
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
 
-using vendor::lineage::touch::V1_0::IHighTouchPollingRate;
-using vendor::lineage::touch::V1_0::ITouchscreenGesture;
-using vendor::lineage::touch::V1_0::implementation::HighTouchPollingRate;
-using vendor::lineage::touch::V1_0::implementation::TouchscreenGesture;
+using vendor::xperience::touch::V1_0::IHighTouchPollingRate;
+using vendor::xperience::touch::V1_0::ITouchscreenGesture;
+using vendor::xperience::touch::V1_0::implementation::HighTouchPollingRate;
+using vendor::xperience::touch::V1_0::implementation::TouchscreenGesture;
 
 int main() {
     sp<IHighTouchPollingRate> highToushPollingRateService = new HighTouchPollingRate();

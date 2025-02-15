@@ -36,7 +36,7 @@ ifeq ($(TARGET_BOARD_PLATFORM),pineapple)
         vendor_hal_nxpnfc_service=hal_nfc_service
 endif
 
-include device/lineage/sepolicy/libperfmgr/sepolicy.mk
+include device/xperience/sepolicy/libperfmgr/sepolicy.mk
 
 SYSTEM_EXT_PUBLIC_SEPOLICY_DIRS := $(shell echo $(SYSTEM_EXT_PUBLIC_SEPOLICY_DIRS) | tr ' ' '\n' | sort -u | tr '\n' ' ')
 SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS := $(shell echo $(SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS) | tr ' ' '\n' | sort -u | tr '\n' ' ')

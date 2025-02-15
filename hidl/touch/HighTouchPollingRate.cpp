@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "vendor.lineage.touch@1.0-service.oplus"
+#define LOG_TAG "vendor.xperience.touch@1.0-service.oplus"
 
 #include "HighTouchPollingRate.h"
 
@@ -30,7 +30,7 @@ constexpr const char* kGameSwitchEnablePath = "/proc/touchpanel/game_switch_enab
 }  // anonymous namespace
 
 namespace vendor {
-namespace lineage {
+namespace xperience {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -47,5 +47,5 @@ Return<bool> HighTouchPollingRate::setEnabled(bool enabled) {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace lineage
+}  // namespace xperience
 }  // namespace vendor
