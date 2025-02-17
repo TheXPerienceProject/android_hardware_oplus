@@ -4,9 +4,12 @@ cc_library_shared {
     vendor: true,
     srcs: [
         "effect.cpp",
+        "VibrationEffectLoader.cpp"
     ],
     shared_libs: [
+        "libbase",
         "libcutils",
+        "libjsoncpp",
         "libutils",
     ],
 }
