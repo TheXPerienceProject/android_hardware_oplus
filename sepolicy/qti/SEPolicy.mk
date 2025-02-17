@@ -32,8 +32,7 @@ endif
 ifeq ($(TARGET_BOARD_PLATFORM),pineapple)
     BOARD_SEPOLICY_M4DEFS += \
         vendor_hal_drm_widevine_exec=hal_drm_widevine_exec \
-        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec \
-        vendor_hal_nxpnfc_service=hal_nfc_service
+        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec
 endif
 
 include device/xperience/sepolicy/libperfmgr/sepolicy.mk

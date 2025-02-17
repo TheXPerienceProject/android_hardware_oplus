@@ -17,7 +17,7 @@ int main() {
     std::shared_ptr<CommonDcsAidlHalService> service =
             ndk::SharedRefBase::make<CommonDcsAidlHalService>();
 
-    const std::string instance = std::string() + CommonDcsAidlHalService::descriptor + "/oplus";
+    const std::string instance = std::string() + CommonDcsAidlHalService::descriptor + "/default";
     binder_status_t status =
             AServiceManager_addService(service->asBinder().get(), instance.c_str());
     CHECK_EQ(status, STATUS_OK);
