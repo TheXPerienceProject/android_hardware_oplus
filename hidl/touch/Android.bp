@@ -34,7 +34,7 @@ cc_binary {
         "libbase",
         "libhidlbase",
         "libutils",
-        "vendor.lineage.touch@1.0",
+        "vendor.xperience.touch@1.0",
         "vendor.oplus.hardware.touch-V1-ndk",
         "libbinder_ndk",
     ],
