@@ -30,7 +30,7 @@ constexpr const char* kWirelessTxEnablePath = "/proc/wireless/enable_tx";
 }  // anonymous namespace
 
 namespace vendor {
-namespace lineage {
+namespace xperience {
 namespace powershare {
 namespace V1_0 {
 namespace implementation {
@@ -55,5 +55,5 @@ Return<uint32_t> PowerShare::setMinBattery(uint32_t /*minBattery*/) {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace powershare
-}  // namespace lineage
+}  // namespace xperience
 }  // namespace vendor

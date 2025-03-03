@@ -25,8 +25,8 @@ using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
 using android::sp;
 
-using vendor::lineage::powershare::V1_0::IPowerShare;
-using vendor::lineage::powershare::V1_0::implementation::PowerShare;
+using vendor::xperience::powershare::V1_0::IPowerShare;
+using vendor::xperience::powershare::V1_0::implementation::PowerShare;
 
 int main() {
     sp<IPowerShare> powerShareService = new PowerShare();

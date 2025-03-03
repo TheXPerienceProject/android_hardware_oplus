@@ -18,10 +18,10 @@
 
 #include <hidl/MQDescriptor.h>
 #include <hidl/Status.h>
-#include <vendor/lineage/touch/1.0/IHighTouchPollingRate.h>
+#include <vendor/xperience/touch/1.0/IHighTouchPollingRate.h>
 
 namespace vendor {
-namespace lineage {
+namespace xperience {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -31,7 +31,7 @@ using ::android::hardware::Void;
 
 class HighTouchPollingRate : public IHighTouchPollingRate {
   public:
-    // Methods from ::vendor::lineage::touch::V1_0::IHighTouchPollingRate follow.
+    // Methods from ::vendor::xperience::touch::V1_0::IHighTouchPollingRate follow.
     Return<bool> isEnabled() override;
     Return<bool> setEnabled(bool enabled) override;
 };
@@ -39,5 +39,5 @@ class HighTouchPollingRate : public IHighTouchPollingRate {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace lineage
+}  // namespace xperience
 }  // namespace vendor

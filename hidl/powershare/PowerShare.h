@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include <vendor/lineage/powershare/1.0/IPowerShare.h>
+#include <vendor/xperience/powershare/1.0/IPowerShare.h>
 
 namespace vendor {
-namespace lineage {
+namespace xperience {
 namespace powershare {
 namespace V1_0 {
 namespace implementation {
@@ -39,5 +39,5 @@ class PowerShare : public IPowerShare {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace powershare
-}  // namespace lineage
+}  // namespace xperience
 }  // namespace vendor
