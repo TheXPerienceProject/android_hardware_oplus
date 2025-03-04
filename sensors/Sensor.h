@@ -136,7 +136,7 @@ class DoubleTapSensor : public SysfsPollingOneShotSensor {
     DoubleTapSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
         : SysfsPollingOneShotSensor(
               sensorHandle, callback, kTsDoubleTapPressedPath,
-              "Double Tap Sensor", "org.yaap.sensor.double_tap",
+              "Double Tap Sensor", "mx.xperience.sensor.double_tap",
               static_cast<SensorType>(static_cast<int32_t>(SensorType::DEVICE_PRIVATE_BASE) + 1)) {}
 };
 
@@ -147,7 +147,7 @@ class SingleTapSensor : public SysfsPollingOneShotSensor {
     SingleTapSensor(int32_t sensorHandle, ISensorsEventCallback* callback)
         : SysfsPollingOneShotSensor(
               sensorHandle, callback, kTsTapPressedPath,
-              "Tap Sensor", "org.yaap.sensor.tap",
+              "Tap Sensor", "mx.xperience.sensor.tap",
               static_cast<SensorType>(static_cast<int32_t>(SensorType::DEVICE_PRIVATE_BASE) + 1)) {}
 };
 
