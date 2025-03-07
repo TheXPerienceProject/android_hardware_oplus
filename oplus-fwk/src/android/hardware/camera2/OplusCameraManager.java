@@ -13,6 +13,14 @@ import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.util.Log;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.CaptureResult;
+import android.hardware.camera2.IOplusCameraManager;
+import android.hardware.camera2.impl.CameraMetadataNative;
+import android.hardware.camera2.marshal.MarshalRegistry;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -49,6 +57,59 @@ public final class OplusCameraManager implements IOplusCameraManager {
         Log.i(TAG, "checkLoadHeifLibbrary, mbLoad: " + this.mbLoad);
         if (this.mbLoad) {
             return;
+
+        }
+    }
+
+    private static final String TAG = "OplusCameraManager";
+
+    public static OplusCameraManager getInstance() {
+        if (sOplusCameraManager == null) {
+            sOplusCameraManager = new OplusCameraManager();
+        }
+        return sOplusCameraManager;
+    }
+
+    public static Object getEmptyCameraMetadataNative(long[] metadataPtr) {
+        CameraMetadataNative meta = new CameraMetadataNative();
+        if (metadataPtr != null && metadataPtr.length > 0) {
+            metadataPtr[0] = meta.getMetadataPtr();
+        }
+        return meta;
+    }
+
+    public static <T> T metaDataValueConvert(CaptureResult.Key<T> key, int i, byte[] bArr) {
+        if (key != null && bArr != null) {
+            return (T) MarshalRegistry.getMarshaler(key.getNativeKey().getTypeReference(), i).unmarshal(ByteBuffer.wrap(bArr).order(ByteOrder.nativeOrder()));
+        }
+        return null;
+    }
+
+    public static int getMetadataTag(CaptureResult.Key key) {
+        if (key != null) {
+            return key.getNativeKey().getTag();
+        }
+        return -1;
+    }
+
+    public static TotalCaptureResult generateTotalCaptureResult(Object meta, long frameId) {
+        if (meta == null || !(meta instanceof CameraMetadataNative)) {
+            return null;
+        }
+        TotalCaptureResult r = new TotalCaptureResult((CameraMetadataNative) meta, 0);
+        try {
+            Field numField = CaptureResult.class.getDeclaredField("mFrameNumber");
+            numField.setAccessible(true);
+            numField.setLong(r, frameId);
+        } catch (IllegalAccessException | NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+        return r;
+    }
+    
+    public void preOpenCamera(Context context) {
+        if (context == null) {
+            throw new IllegalArgumentException("context was null");
         }
         try {
             System.loadLibrary("HeifWinBufExchg-jni");
@@ -255,6 +316,21 @@ public final class OplusCameraManager implements IOplusCameraManager {
         }
     }
 
+
+    public void sendOplusExtCamCmd(Context context, IOplusCameraManager.Cmd cmd, int[] args) {
+        if (context == null) {
+            throw new IllegalArgumentException("context was null");
+        }
+        try {
+            String packageName = context.getOpPackageName();
+            OplusCameraManagerGlobal.get().sendOplusExtCamCmd(packageName, cmd, args);
+        } catch (CameraAccessException | RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static final class OplusCameraManagerGlobal implements IBinder.DeathRecipient {
+
     public void setDeathRecipient(Context context, IBinder client) {
         if (context == null) {
             throw new IllegalArgumentException("context was null");
@@ -412,6 +488,7 @@ public final class OplusCameraManager implements IOplusCameraManager {
         private static final int REGISTER_CAMERA_DEVICE_CALLBACK = 10019;
         private static final int SEND_OPLUS_EXT_CAM_CMD = 10015;
         private static final int SET_CALL_INFO = 10006;
+
         private static final int SET_CLIENT_INFO = 10005;
         private static final int SET_DEATH_RECIPIENT = 10002;
         private static final int SET_DEATH_RECIPIENT_FOR_NAME = 10022;
@@ -426,6 +503,9 @@ public final class OplusCameraManager implements IOplusCameraManager {
         private static final OplusCameraManagerGlobal gCameraManager = new OplusCameraManagerGlobal();
         public static final boolean sCameraServiceDisabled = SystemProperties.getBoolean("config.disable_cameraservice", false);
         private final boolean DEBUG = false;
+
+        private static final int PRE_OPEN_CAMERA = 10014;
+
         private final Object mLock = new Object();
         private IBinder mRemote = null;
 
@@ -553,9 +633,9 @@ public final class OplusCameraManager implements IOplusCameraManager {
             }
         }
 
-        public void sendOplusExtCamCmd(String packageName, IOplusCameraManager.Cmd cmd, int[] param) throws CameraAccessException, RemoteException {
+        public void sendOplusExtCamCmd(String packageName, IOplusCameraManager.Cmd cmd, int[] args) throws CameraAccessException, RemoteException {
             Log.e(TAG, "sendOplusExtCamCmd, packageName: " + packageName + ", cmd: " + cmd);
-            IBinder remote = getCameraServiceRemote();
+            final IBinder remote = getCameraServiceRemote();
             if (remote == null) {
                 throw new CameraAccessException(2, "Camera service is currently unavailable");
             }
@@ -564,12 +644,12 @@ public final class OplusCameraManager implements IOplusCameraManager {
             try {
                 data.writeInterfaceToken(DESCRIPTOR);
                 data.writeInt(cmd.ordinal());
-                data.writeIntArray(param);
-                this.mRemote.transact(10015, data, reply, 1);
+                data.writeIntArray(args);
+                mRemote.transact(SEND_OPLUS_EXT_CAM_CMD, data, reply, 0);
                 reply.readException();
                 data.recycle();
                 reply.recycle();
-                Log.e(TAG, "sendOplusExtCamCmd complete ");
+                Log.e(TAG, "sendOplusExtCamCmd complete");
             } catch (Throwable th) {
                 data.recycle();
                 reply.recycle();
