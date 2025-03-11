@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2021-2023 The LineageOS Project
+ * Copyright (C) 2025 The XPerience Project
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -14,12 +15,14 @@ import android.media.AudioManager
 import android.media.AudioSystem
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.Looper
 import android.provider.Settings
 import android.os.UserHandle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.KeyEvent
+import android.widget.Toast
 import com.android.internal.os.DeviceKeyHandler
 import java.io.File
 
@@ -60,7 +63,7 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
             broadcastReceiver,
             IntentFilter(AudioManager.STREAM_MUTE_CHANGED_ACTION)
         )
-        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager 
+        val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
         vibrator = vibratorManager?.defaultVibrator ?: (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)
 
         if (vibrator == null || !vibrator.hasVibrator()) {
@@ -165,6 +168,15 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
 
         if (sharedPreferences.getBoolean(SLIDER_DIALOG_ENABLED, true)) { // Show slider dialog if enabled in preferences
             sendNotification(getPositionFromKeyCode(keyCodeValue), keyCodeValue)
+
+            // Add toast for debugging
+           /* android.os.Handler(Looper.getMainLooper()).post {
+                Toast.makeText(
+                    context,
+                    "KeyCodeValue: $keyCodeValue, Position: ${getPositionFromKeyCode(keyCodeValue)}",
+                               Toast.LENGTH_SHORT
+                ).show()
+            }*/
         }
 
         prevKeyCode = keyCodeValue
@@ -183,13 +195,29 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
     }
 
     private fun sendNotification(position: Int, mode: Int) {
+        val actualMode = mapKeyCodeToMode(mode)
         val intent =
             Intent(SLIDER_UPDATE_ACTION).apply {
                 putExtra("position", position)
-                putExtra("mode", mode)
+                putExtra("mode", actualMode)
+                putExtra("position_value", actualMode)
             }
         context.sendBroadcastAsUser(intent, UserHandle(UserHandle.USER_CURRENT))
     }
+
+    private fun mapKeyCodeToMode(keyCode: Int): Int {
+        return when (keyCode) {
+            KEY_VALUE_TOTAL_SILENCE -> ZEN_TOTAL_SILENCE
+            KEY_VALUE_PRIORITY_ONLY -> ZEN_PRIORITY_ONLY
+            KEY_VALUE_SILENT -> AudioManager.RINGER_MODE_SILENT
+            KEY_VALUE_VIBRATE -> AudioManager.RINGER_MODE_VIBRATE
+            KEY_VALUE_NORMAL -> AudioManager.RINGER_MODE_NORMAL
+            else -> {
+                AudioManager.RINGER_MODE_NORMAL
+            }
+        }
+    }
+
 
     private fun getPositionFromKeyCode(keyCodeValue: Int): Int {
         return when (keyCodeValue) {
@@ -218,18 +246,17 @@ class KeyHandler(private val context: Context) : DeviceKeyHandler {
         private const val MUTE_MEDIA_WITH_SILENT = "config_mute_media"
         private const val SLIDER_DIALOG_ENABLED = "config_slider_dialog" // Preference to enable/disable dialog
 
-        // Key Values - Slider modes as integer values
-        const val KEY_VALUE_TOTAL_SILENCE = 0 // "Total Silence" slider mode
-        const val KEY_VALUE_SILENT = AudioManager.RINGER_MODE_SILENT
-        const val KEY_VALUE_PRIORITY_ONLY = 3 // "Priority Only" slider mode
-        const val KEY_VALUE_VIBRATE = AudioManager.RINGER_MODE_VIBRATE
-        const val KEY_VALUE_NORMAL = AudioManager.RINGER_MODE_NORMAL
-
         // ZEN constants - Make these public to be accessible from AlertSliderDialog
         public const val ZEN_PRIORITY_ONLY = 3 // Re-declare ZEN constants here, same values as before if needed for AlertSliderDialog
         public const val ZEN_TOTAL_SILENCE = 4
         public const val ZEN_ALARMS_ONLY = 5
 
+        // Key Values - Slider modes as integer values
+        const val KEY_VALUE_TOTAL_SILENCE = 0 // "Total Silence" slider mode
+        const val KEY_VALUE_SILENT = AudioManager.RINGER_MODE_SILENT
+        const val KEY_VALUE_PRIORITY_ONLY = ZEN_PRIORITY_ONLY // "Priority Only" slider mode
+        const val KEY_VALUE_VIBRATE = AudioManager.RINGER_MODE_VIBRATE
+        const val KEY_VALUE_NORMAL = AudioManager.RINGER_MODE_NORMAL
 
         // Helper functions
         @JvmStatic // To be callable from Java if needed
