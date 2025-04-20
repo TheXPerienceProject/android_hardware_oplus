@@ -49,8 +49,12 @@ type proc_libperfmgr_adds, fs_type, proc_type;
 # NVRAM
 type nvram_socket, file_type;
 
+# Multimedia feedback
+type vendor_proc_mm_fb, fs_type, proc_type;
+
 # Performance
 type vendor_proc_oplus_scheduler, fs_type, proc_type;
+type vendor_sysfs_cb, fs_type, sysfs_type;
 
 # Sensors
 type vendor_proc_eng_cali_file, fs_type, proc_type;
