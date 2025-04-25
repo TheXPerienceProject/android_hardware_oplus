@@ -400,7 +400,7 @@
             <instance>default</instance>
         </interface>
     </hal>
-    <hal format="aidl">
+    <hal format="aidl" optional="true">
         <name>vendor.oplus.hardware.subsys_interface.subsys_radio</name>
         <version>1-4</version>
         <interface>
@@ -409,7 +409,7 @@
             <instance>slot2</instance>
         </interface>
     </hal>
-    <hal format="aidl">
+    <hal format="aidl" optional="true">
         <name>vendor.oplus.hardware.subsys_interface.subsys</name>
         <version>3</version>
         <interface>
