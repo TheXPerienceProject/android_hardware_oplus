@@ -35,6 +35,9 @@ type vendor_sysfs_mediacodec, fs_type, sysfs_type;
 # Libperfmgr
 type proc_libperfmgr_adds, fs_type, proc_type;
 
+# NVRAM
+type nvram_socket, file_type;
+
 # Performance
 type vendor_proc_oplus_scheduler, fs_type, proc_type;
 
