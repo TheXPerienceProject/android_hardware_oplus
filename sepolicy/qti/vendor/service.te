@@ -21,6 +21,9 @@ type vendor_displaypanelfeature_service, hal_service_type, service_manager_type;
 # Iris
 type hal_display_iris_aidl_service, hal_service_type, service_manager_type;
 
+# Fingerprint Pay
+type hal_fingerprintpay_service, hal_service_type, service_manager_type;
+
 # ImsRtp
 type hal_imsrtp_service, hal_service_type, service_manager_type;
 
