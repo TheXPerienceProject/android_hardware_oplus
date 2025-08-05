@@ -38,6 +38,10 @@ gf.debug.dump_data    u:object_r:system_fingerprint_prop:s0
 oplus.fingerprint.    u:object_r:system_fingerprint_prop:s0
 oplus.goodix.fp       u:object_r:system_fingerprint_prop:s0
 oplus.optical.        u:object_r:system_fingerprint_prop:s0
+persist.sys.fp.                                    u:object_r:system_fingerprint_prop:s0
+persist.vendor.fingerprint.optical.iconlocation    u:object_r:system_fingerprint_prop:s0
+persist.vendor.fingerprint.optical.iconsize        u:object_r:system_fingerprint_prop:s0
+persist.vendor.fingerprint.sensor_type             u:object_r:system_fingerprint_prop:s0
 
 # Logging
 aec.custom.debug.                   u:object_r:exported_system_prop:s0
