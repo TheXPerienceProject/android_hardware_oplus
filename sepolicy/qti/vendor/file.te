@@ -13,6 +13,9 @@ type vendor_sysfs_wireless, fs_type, sysfs_type;
 # Display
 type vendor_proc_display, fs_type, proc_type;
 
+# Display - DC dim
+type sysfs_dcd, sysfs_type, fs_type;
+
 # Engineering
 type vendor_proc_engineer, fs_type, proc_type;
 

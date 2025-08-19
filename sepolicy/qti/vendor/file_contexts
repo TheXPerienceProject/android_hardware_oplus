@@ -38,6 +38,9 @@
 /(odm|vendor/odm)/bin/hw/vendor\.pixelworks\.hardware\.feature\.irisfeature-service    u:object_r:hal_graphics_composer_default_exec:s0
 /(odm|vendor/odm)/bin/hw/vendor\.pixelworks\.hardware\.feature\.irisfeature            u:object_r:hal_graphics_composer_default_exec:s0
 
+# Display (DC Dim)
+/sys/kernel/oplus_dc_dim/dc_dim_enable    u:object_r:sysfs_dcd:s0
+
 # Dolby
 /data/vendor/dolby(/.*)?                                                               u:object_r:vendor_data_file:s0
 /(vendor|system/vendor|odm)/bin/hw/dolbycodec2                                         u:object_r:mediacodec_exec:s0
