@@ -4,6 +4,9 @@ vendor.oplus.hardware.camera_rfi.ICameraRfiService/default               u:objec
 vendor.oplus.hardware.cammidasservice.IMIDASService/default              u:object_r:hal_oplus_cammidasservice_aidl_service:s0
 vendor.oplus.hardware.sendextcamcmd.ISendExtCamCmdService/default        u:object_r:hal_camera_service:s0
 
+# Charger
+vendor.oplus.hardware.charger.ICharger/default    u:object_r:hal_oplus_charger_aidl_service:s0
+
 # Commondcs
 vendor.oplus.hardware.commondcs.ICommonDcsAidlHalService/default     u:object_r:hal_oplus_commondcs_aidl_service:s0
 

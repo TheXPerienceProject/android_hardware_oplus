@@ -14,6 +14,7 @@
 
 # Charging
 /vendor/bin/hw/vendor\.lineage\.powershare-service\.oplus    u:object_r:hal_xperience_powershare_default_exec:s0
+/(odm|vendor/odm)/bin/hw/vendor\.oplus\.hardware\.charger-V[0-9]+-service    u:object_r:hal_oplus_charger_aidl_exec:s0
 
 # CommonDcs
 /vendor/bin/hw/vendor\.oplus\.hardware\.commondcs-service    u:object_r:hal_oplus_commondcs_aidl_exec:s0
