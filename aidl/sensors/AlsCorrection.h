@@ -20,7 +20,8 @@ static constexpr int SENSOR_TYPE_QTI_WISE_LIGHT = 33171103;
 class AlsCorrection {
   public:
     static void init();
-    static void process(Event& event);
+    static void reloadConfig();
+    static bool process(Event& event);
 };
 
 }  // namespace implementation

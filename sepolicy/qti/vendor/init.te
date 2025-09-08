@@ -10,3 +10,4 @@ allow init same_process_hal_file:file execute;
 allow init hal_power_service:service_manager add;
 
 allow init vendor_proc_oplus_version:file r_file_perms;
+set_prop(init, audio_prop)
