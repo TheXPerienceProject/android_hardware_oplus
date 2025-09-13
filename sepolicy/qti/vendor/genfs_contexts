@@ -4,6 +4,7 @@ genfscon proc /tristatekey    u:object_r:vendor_proc_tri_state_key:s0
 # Charging
 genfscon proc /wireless                                                   u:object_r:vendor_proc_wireless:s0
 genfscon proc /charger                                                    u:object_r:vendor_proc_charger:s0
+genfscon proc /batt_param_noplug                                          u:object_r:vendor_proc_charger:s0
 genfscon sysfs /class/oplus_mutual/cmd                                    u:object_r:vendor_sysfs_charger:s0
 genfscon sysfs /devices/platform/soc/1c40000.qcom,spmi/spmi-0/spmi0-02/1c40000.qcom,spmi:qcom,pm7250b@2:qcom,qpnp-smb5/power_supply/ac    u:object_r:vendor_sysfs_battery_supply:s0
 genfscon sysfs /devices/platform/soc/4c90000.i2c/i2c-1/1-006b/iio:device                                                                  u:object_r:vendor_sysfs_battery_supply:s0
@@ -50,6 +51,9 @@ genfscon proc /qcom_flash    u:object_r:vendor_proc_flash:s0
 genfscon sysfs /devices/platform/soc/ae00000.qcom,mdss_mdp/drm/card0/sde-crtc-    u:object_r:vendor_sysfs_sde_crtc:s0
 
 genfscon sysfs /devices/platform/soc/3d00000.qcom,kgsl-3d0/kgsl/kgsl-3d0/idle_timer    u:object_r:vendor_sysfs_kgsl:s0
+
+# Horae
+genfscon proc /shell-temp    u:object_r:proc_horae:s0
 
 # Libperfmgr
 genfscon proc /sys/walt/sched_busy_hyst_ns                        u:object_r:proc_libperfmgr_adds:s0
