@@ -37,6 +37,9 @@ type proc_horae, fs_type, proc_type;
 # Input
 type proc_bus_input, fs_type, proc_type;
 
+# KProfiles
+type sysfs_kprofiles, sysfs_type, fs_type;
+
 # Media
 type vendor_sysfs_mediacodec, fs_type, sysfs_type;
 

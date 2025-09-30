@@ -55,6 +55,10 @@ genfscon sysfs /devices/platform/soc/3d00000.qcom,kgsl-3d0/kgsl/kgsl-3d0/idle_ti
 # Horae
 genfscon proc /shell-temp    u:object_r:proc_horae:s0
 
+# KProfiles
+genfscon sysfs /module/kprofiles/parameters/auto_kp u:object_r:sysfs_kprofiles:s0
+genfscon sysfs /kernel/kprofiles/kp_mode u:object_r:sysfs_kprofiles:s0
+
 # Libperfmgr
 genfscon proc /sys/walt/sched_busy_hyst_ns                        u:object_r:proc_libperfmgr_adds:s0
 genfscon proc /sys/walt/sched_busy_hysteresis_enable_cpus         u:object_r:proc_libperfmgr_adds:s0
