@@ -1,0 +1,2 @@
+# bind files
+allow init system_file:file mounton;
