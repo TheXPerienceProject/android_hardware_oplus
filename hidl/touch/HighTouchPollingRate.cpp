@@ -24,7 +24,6 @@
 
 using ::android::base::ReadFileToString;
 using ::android::base::WriteStringToFile;
-using ::android::base::LOG;
 
 namespace {
 
@@ -35,6 +34,8 @@ constexpr const char* kTouchRatePaths[] = {
     kHighRatePath0,
     kHighRatePath1,
 };
+
+constexpr const char* kPrimaryHighRatePath = kHighRatePath0;
 
 }  // anonymous namespace
 
