@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 The LineageOS Project
+ * Copyright (C) 2025 The XPerience Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +20,21 @@
 #include "HighTouchPollingRate.h"
 
 #include <android-base/file.h>
+#include <android-base/logging.h>
 
 using ::android::base::ReadFileToString;
 using ::android::base::WriteStringToFile;
+using ::android::base::LOG;
 
 namespace {
 
-constexpr const char* kGameSwitchEnablePath = "/proc/touchpanel/game_switch_enable";
+constexpr const char* kHighRatePath0 = "/sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi0/spi0.0/synaptics_tcm_hbp.0/high_rate";
+constexpr const char* kHighRatePath1 = "/sys/devices/platform/soc/ac0000.qcom,qupv3_1_geni_se/a90000.spi/spi_master/spi1/spi1.0/synaptics_tcm_hbp.0/high_rate";
+
+constexpr const char* kTouchRatePaths[] = {
+    kHighRatePath0,
+    kHighRatePath1,
+};
 
 }  // anonymous namespace
 
@@ -37,11 +46,29 @@ namespace implementation {
 
 Return<bool> HighTouchPollingRate::isEnabled() {
     std::string value;
-    return ReadFileToString(kGameSwitchEnablePath, &value) && value[0] != '0';
+    if (!ReadFileToString(kPrimaryHighRatePath, &value)) {
+        LOG(ERROR) << "Failure to read the status of the primary route: " << kHighRatePath0;
+        return false;
+    }
+    return value.rfind('1') != std::string::npos;
 }
 
 Return<bool> HighTouchPollingRate::setEnabled(bool enabled) {
-    return WriteStringToFile(enabled ? "1" : "0", kGameSwitchEnablePath, true);
+    const char* value = enabled ? "1" : "0";
+    bool all_success = true;
+
+    // Iterate over all known routes and attempt to write the value
+    for (const char* path : kTouchRatePaths) {
+        if (!WriteStringToFile(value, path, true)) {
+            all_success = false;
+            // Log the error to assist with debugging
+            LOG(ERROR) << "Error when entering the value (" << value << ") on the route: " << path;
+        } else {
+            LOG(INFO) << "Success when writing the value (" << value << ") on the route: " << path;
+        }
+    }
+
+    return all_success;
 }
 
 }  // namespace implementation
