@@ -7,6 +7,10 @@
             <name>ITouchscreenGesture</name>
             <instance>default</instance>
         </interface>
+       <interface>
+            <name>IHighTouchPollingRate</name>
+            <instance>default</instance>
+        </interface>
     </hal>
     <hal format="hidl">
         <name>vendor.xperience.touch</name>
@@ -14,6 +18,10 @@
         <version>1.0</version>
         <interface>
             <name>ITouchscreenGesture</name>
+            <instance>default</instance>
+        </interface>
+       <interface>
+            <name>IHighTouchPollingRate</name>
             <instance>default</instance>
         </interface>
     </hal>
