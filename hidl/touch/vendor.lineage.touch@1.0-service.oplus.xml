@@ -4,11 +4,15 @@
         <transport>hwbinder</transport>
         <version>1.0</version>
         <interface>
-            <name>ITouchscreenGesture</name>
+            <name>IGloveMode</name>
             <instance>default</instance>
         </interface>
        <interface>
             <name>IHighTouchPollingRate</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>ITouchscreenGesture</name>
             <instance>default</instance>
         </interface>
     </hal>
@@ -17,11 +21,15 @@
         <transport>hwbinder</transport>
         <version>1.0</version>
         <interface>
-            <name>ITouchscreenGesture</name>
+            <name>IGloveMode</name>
             <instance>default</instance>
         </interface>
        <interface>
             <name>IHighTouchPollingRate</name>
+            <instance>default</instance>
+        </interface>
+        <interface>
+            <name>ITouchscreenGesture</name>
             <instance>default</instance>
         </interface>
     </hal>
