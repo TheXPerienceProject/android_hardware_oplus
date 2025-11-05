@@ -74,16 +74,16 @@ genfscon proc /mm_fb    u:object_r:vendor_proc_mm_fb:s0
 
 # Performance
 genfscon proc /oplus_scheduler                                     u:object_r:vendor_proc_oplus_scheduler:s0
-genfscon proc /task_info/task_sched_info/d_backtrace               u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/d_convert                 u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/io_backtrace              u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/limit_table               u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/pids_set                  u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/sched_buffer              u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/sched_info_threshold      u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/task_sched_info_enable    u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/tids_set                  u:object_r:vendor_proc_oplus_ctp:s0
-genfscon proc /task_info/task_sched_info/version                   u:object_r:vendor_proc_oplus_ctp:s0
+genfscon proc /task_info/task_sched_info/d_backtrace               u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/d_convert                 u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/io_backtrace              u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/limit_table               u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/pids_set                  u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/sched_buffer              u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/sched_info_threshold      u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/task_sched_info_enable    u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/tids_set                  u:object_r:vendor_proc_oplus_scheduler:s0
+genfscon proc /task_info/task_sched_info/version                   u:object_r:vendor_proc_oplus_scheduler:s0
 genfscon sysfs /module/cpufreq_bouncing                            u:object_r:vendor_sysfs_cb:s0
 
 # Secure
@@ -150,7 +150,6 @@ genfscon sysfs /devices/platform/soc/994000.i2c/i2c-5/5-0066/wakeup u:object_r:s
 genfscon sysfs /devices/platform/soc/994000.i2c/i2c-8/8-003b/994000.i2c:op,wlchg_rx@3b:idt,p9415/wakeup u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/soc/994000.i2c/i2c-8/8-0066/wakeup u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/soc/998000.qcom,qup_uart/wakeup u:object_r:sysfs_wakeup:s0
-genfscon sysfs /devices/platform/soc/9c0000.qcom,qupv3_i2c_geni_se/98c000.i2c/i2c-5/5-003b/wakeup u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/soc/9c0000.qcom,qupv3_i2c_geni_se/98c000.i2c/i2c-6/6-0036/wakeup u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/soc/9c0000.qcom,qupv3_i2c_geni_se/9a4000.i2c/i2c-7/7-0010/wakeup u:object_r:sysfs_wakeup:s0
 genfscon sysfs /devices/platform/soc/a600000.ssusb/a600000.dwc3/wakeup u:object_r:sysfs_wakeup:s0
