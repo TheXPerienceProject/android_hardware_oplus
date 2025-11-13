@@ -11,11 +11,8 @@ init_daemon_domain(hal_oplus_touch_aidl)
 binder_call(vendor_hal_oplus_touch_client, vendor_hal_oplus_touch_server)
 
 add_service(hal_oplus_touch_aidl, hal_oplus_touch_aidl_service)
-<<<<<<< HEAD
 
 allow hal_oplus_touch_aidl hal_oplus_touchdaemon:binder call;
-=======
->>>>>>> 165c5e4 (touch: Support interfacing with stock OplusTouch service)
 
 allow hal_oplus_touch_aidl touchDeamonBinder_service:service_manager find;
 

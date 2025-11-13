@@ -1,0 +1,2 @@
+allow vendor_hal_perf_default lmkd:dir search;
+allow vendor_hal_perf_default lmkd:file r_file_perms;

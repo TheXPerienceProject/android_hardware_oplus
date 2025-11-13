@@ -1,0 +1,1 @@
+allow hal_camera_default hal_fingerprint_service:service_manager find;

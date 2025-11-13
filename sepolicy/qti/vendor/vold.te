@@ -1,0 +1,2 @@
+allow vold oplus_reserve_file:dir r_dir_perms;
+allow vold mnt_product_file:dir r_dir_perms;

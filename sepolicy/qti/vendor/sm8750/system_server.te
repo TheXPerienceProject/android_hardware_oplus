@@ -1,0 +1,2 @@
+# Vooc
+allow system_server vendor_sysfs_usb_supply:file r_file_perms;
