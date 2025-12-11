@@ -1,1 +1,4 @@
 allow hal_secure_element_default nfc_device:chr_file getattr;
+allow secure_element init:binder { call transfer };
+# Allow init to call into Secure Element service (vendor NFC/TEE integration)
+allow init secure_element:binder call;

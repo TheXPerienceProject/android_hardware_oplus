@@ -15,6 +15,7 @@ allow hal_fingerprint_default hal_oplus_touch_aidl_service:service_manager find;
 
 allow hal_fingerprint_default vendor_hal_orms_hwservice:hwservice_manager find;
 allow hal_fingerprint_default vendor_hal_osense_hwservice:hwservice_manager find;
+allow hal_fingerprint_default osense_service:service_manager find;
 
 allow hal_fingerprint_default fingerprint_device:chr_file rw_file_perms;
 allow hal_fingerprint_default graphics_device:chr_file rw_file_perms;

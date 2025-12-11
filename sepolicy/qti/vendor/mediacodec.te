@@ -1,3 +1,5 @@
 allow mediacodec vendor_sysfs_mediacodec:file r_file_perms;
 
 set_prop(mediacodec, vendor_video_prop)
+
+allow mediacodec vendor_default_prop:property_service set;

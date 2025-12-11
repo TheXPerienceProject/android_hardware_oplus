@@ -1,2 +1,7 @@
 # Vooc
 allow system_server vendor_sysfs_usb_supply:file r_file_perms;
+
+#read Oplus display driver proc entries
+allow system_server vendor_proc_mm_fb:file getattr;
+allow system_server proc_horae:file getattr;
+allow system_server vendor_proc_charger:file getattr;

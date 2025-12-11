@@ -34,3 +34,6 @@ rw_dir_file(hal_oplus_touchdaemon, proc_horae)
 
 set_prop(hal_oplus_touchdaemon, system_oplus_touch_prop)
 set_prop(hal_oplus_touchdaemon, vendor_oplus_touch_prop)
+
+allow hal_oplus_touchdaemon default_prop:file read;
+allow hal_oplus_touchdaemon default_prop:property_service set;

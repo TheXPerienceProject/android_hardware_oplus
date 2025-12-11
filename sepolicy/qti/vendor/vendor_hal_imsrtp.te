@@ -1,5 +1,6 @@
 add_service(vendor_hal_imsrtp, hal_imsrtp_service)
 
 allow vendor_hal_imsrtp hal_subsys_service:service_manager find;
+allow vendor_hal_imsrtp init:binder { call transfer };
 
 get_prop(vendor_hal_imsrtp, boot_status_prop)
