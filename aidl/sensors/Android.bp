@@ -49,10 +49,8 @@ cc_binary {
         "liblog",
         "libpower",
         "libutils",
-        "libbinder",
         "libbinder_ndk",
         "libhidlbase",
-        "vendor.lineage.oplus_als-V1-ndk",
     ],
     static_libs: [
         "libaidlcommonsupport",

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-#include "AlsCorrection.h"
-
 #include "HalProxy.h"
 
 #include <android/hardware/sensors/2.0/types.h>
@@ -521,10 +519,6 @@ void HalProxy::initializeSensorList() {
                     if (!keep) {
                         continue;
                     }
-                    if (static_cast<int>(sensor.type) == SENSOR_TYPE_QTI_WISE_LIGHT) {
-                        sensor.type = V2_1::SensorType::LIGHT;
-                        AlsCorrection::init();
-                    }
                     mSensors[sensor.sensorHandle] = sensor;
                 }
             }
@@ -687,18 +681,12 @@ void HalProxy::resetSharedWakelock() {
     mWakelockTimeoutResetTime = getTimeNow();
 }
 
-void HalProxy::postEventsToMessageQueue(const std::vector<Event>& eventsList, size_t numWakeupEvents,
+void HalProxy::postEventsToMessageQueue(const std::vector<Event>& events, size_t numWakeupEvents,
                                         V2_0::implementation::ScopedWakelock wakelock) {
     size_t numToWrite = 0;
     std::lock_guard<std::mutex> lock(mEventQueueWriteMutex);
     if (wakelock.isLocked()) {
         incrementRefCountAndMaybeAcquireWakelock(numWakeupEvents);
-    }
-    std::vector<Event> events(eventsList);
-    for (auto& event : events) {
-        if (static_cast<int>(event.sensorType) == SENSOR_TYPE_QTI_WISE_LIGHT) {
-            AlsCorrection::process(event);
-        }
     }
     if (mPendingWriteEventsQueue.empty()) {
         numToWrite = std::min(events.size(), mEventQueue->availableToWrite());
