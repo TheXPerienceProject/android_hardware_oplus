@@ -27,7 +27,7 @@ cc_library_shared {
     ],
     cflags: [
         "-DLOG_TAG=\"sensors.wrapper\"",
-    ] + select(soong_config_variable("OPLUS_SENSORS_WRAPPER", "WRAPPED_LIB_NAME"), {
+    ] + select(soong_config_variable("oplus_sensors", "wrapped_lib_name"), {
         any @ flag_val: ["-DWRAPPED_LIB_NAME=\"" + flag_val + "\""],
         default: [],
     }),
