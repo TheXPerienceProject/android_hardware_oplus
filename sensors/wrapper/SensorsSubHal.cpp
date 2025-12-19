@@ -112,11 +112,12 @@ Return<void> SensorsSubHal::getSensorsList_2_1(ISensors::getSensorsList_2_1_cb _
 
             LOG(INFO) << "High PWM Light sensor found, aliasing it to Light sensor";
 
+/*
             use_als_correction_ = als_correction_.init();
             if (!use_als_correction_) {
                 LOG(ERROR) << "Failed to initialize ALS correction";
             }
-
+*/
             _hidl_cb(sensors);
         } else {
             _hidl_cb(_hidl_out_list);
@@ -166,6 +167,7 @@ void SensorsSubHal::postEvents(const std::vector<Event>& events, ScopedWakelock 
     for (auto&& e : events) {
         if (static_cast<int32_t>(e.sensorType) == kTypeUnderScreenRgbSensor) {
             auto corrected_lux = e.u.scalar;
+/*
             if (use_als_correction_) {
                 corrected_lux = als_correction_.process(e);
                 if (corrected_lux < 0.f) {
@@ -173,6 +175,7 @@ void SensorsSubHal::postEvents(const std::vector<Event>& events, ScopedWakelock 
                     continue;
                 }
             }
+*/
             auto event_copy = e;
             event_copy.sensorHandle = ToWrappedHandle(e.sensorHandle);
             event_copy.sensorType = SensorType::LIGHT;
