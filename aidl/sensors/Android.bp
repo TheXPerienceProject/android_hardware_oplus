@@ -27,10 +27,7 @@ cc_binary {
         "service.cpp",
         "HalProxy.cpp",
         "HalProxyCallback.cpp",
-    ] + select(soong_config_variable("oplus_sensors", "uses_nextgen_fusion_sensor"), {
-        "true": ["AlsCorrection_fusion_ng.cpp"],
-        default: ["AlsCorrection.cpp"],
-    }),
+    ],
     header_libs: [
         "android.hardware.sensors@2.X-multihal.header",
         "android.hardware.sensors@2.X-shared-utils",
@@ -45,7 +42,6 @@ cc_binary {
         "libbase",
         "libcutils",
         "libfmq",
-        "libjsoncpp",
         "liblog",
         "libpower",
         "libutils",
