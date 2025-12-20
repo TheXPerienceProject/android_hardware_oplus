@@ -17,7 +17,6 @@ using android::ScreenshotClient;
 using android::sp;
 using android::SurfaceComposerClient;
 using android::SyncScreenCaptureListener;
-using android::gui::SecureLayerMode;
 using android::gui::aidl_utils::toARect;
 
 namespace aidl {
@@ -40,7 +39,7 @@ ndk::ScopedAStatus AreaCapture::getAreaBrightness(int32_t topX, int32_t topY, in
     DisplayCaptureArgs displayCaptureArgs;
     displayCaptureArgs.captureArgs.pixelFormat = ::android::PIXEL_FORMAT_RGBA_8888;
     displayCaptureArgs.captureArgs.sourceCrop = toARect(area);
-    displayCaptureArgs.captureArgs.secureLayerMode = SecureLayerMode::Capture;
+    displayCaptureArgs.captureArgs.captureSecureLayers = true;
     displayCaptureArgs.displayToken = GetInternalDisplayToken();
     displayCaptureArgs.width = area.getWidth();
     displayCaptureArgs.height = area.getHeight();
