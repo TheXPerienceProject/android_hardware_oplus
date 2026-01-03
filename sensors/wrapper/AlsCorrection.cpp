@@ -1,620 +1,290 @@
 /*
- * SPDX-FileCopyrightText: 2025 The LineageOS Project
- * SPDX-FileCopyrightText: 2025 The YAAP Project
+ * Copyright (C) 2021-2024 The LineageOS Project
+ *
  * SPDX-License-Identifier: Apache-2.0
  */
 
 #include "AlsCorrection.h"
 
-#include <fstream>
-
-#include <android-base/file.h>
-#include <android-base/logging.h>
 #include <android-base/properties.h>
-#include <android-base/stringprintf.h>
 #include <android/binder_manager.h>
-#include <json/json.h>
+#include <binder/IBinder.h>
+#include <binder/IServiceManager.h>
+#include <cmath>
+#include <fstream>
+#include <log/log.h>
 #include <utils/Timers.h>
 
 using aidl::vendor::lineage::oplus_als::AreaRgbCaptureResult;
-using android::base::ReadFileToString;
-using android::base::StringAppendF;
-using android::base::StringPrintf;
+using aidl::vendor::lineage::oplus_als::IAreaCapture;
+using android::base::GetBoolProperty;
+using android::base::GetIntProperty;
+using android::base::GetProperty;
 
-constexpr auto kBrightnessPath = "/sys/class/backlight/panel0-backlight/brightness";
-constexpr auto kFusionLightJson = "/odm/etc/fusionlight.json";
+#define ALS_CALI_DIR "/proc/sensor/als_cali/"
+#define BRIGHTNESS_DIR "/sys/class/backlight/panel0-backlight/"
 
 namespace android {
 namespace hardware {
 namespace sensors {
 namespace V2_1 {
-namespace subhal {
 namespace implementation {
-namespace wrapper {
 
-namespace {
-
-float ParseFloat(const Json::Value& val) {
-    if (val.isString()) {
-        return std::stof(val.asString());
-    }
-    return val.asFloat();
-}
-
-int ParseInt(const Json::Value& val) {
-    if (val.isString()) {
-        return std::stoi(val.asString());
-    }
-    return val.asInt();
-}
-
-std::vector<BrightnessRange> ParseBrightnessRanges(const Json::Value& arr) {
-    std::vector<BrightnessRange> out;
-    out.resize(arr.size());
-    for (const Json::Value& item : arr) {
-        int level = item["Level"].asInt();
-        out[level] = {item["BrightnessMin"].asInt(), item["BrightnessMax"].asInt()};
-    }
-    return out;
-}
-
-std::vector<LuxCoeff> ParseLuxCoeff(const Json::Value& arr) {
-    std::vector<LuxCoeff> out;
-    out.resize(arr.size());
-    for (const Json::Value& item : arr) {
-        int level = item["Level"].asInt();
-        out[level] = {ParseFloat(item["ChannelR"]), ParseFloat(item["ChannelG"]),
-                      ParseFloat(item["ChannelB"]), ParseFloat(item["ChannelC"])};
-    }
-    return out;
-}
-
-std::vector<Golden> ParseGolden(const Json::Value& arr) {
-    std::vector<Golden> out;
-    out.resize(arr.size());
-    for (const Json::Value& item : arr) {
-        int ch = item["Channel"].asInt();
-        out[ch] = {ParseInt(item["RGolden"]), ParseInt(item["GGolden"]), ParseInt(item["BGolden"]),
-                   ParseInt(item["WGolden"])};
-    }
-    return out;
-}
-
-std::vector<GreyScale> ParseGreyScale(const Json::Value& arr) {
-    std::vector<GreyScale> out;
-    out.resize(arr.size());
-    for (const Json::Value& item : arr) {
-        int ch = item["Channel"].asInt();
-        out[ch] = {ParseFloat(item["RGreyscale"]), ParseFloat(item["GGreyscale"]),
-                   ParseFloat(item["BGreyscale"])};
-    }
-    return out;
-}
-
-float SrgbToLinear(float x) {
-    x = x / 255.0f;
-    return (x <= 0.04045f) ? (x / 12.92f) : std::pow((x + 0.055f) / 1.055f, 2.4f);
+static const std::string rgbw_max_lux_paths[4] = {
+    ALS_CALI_DIR "red_max_lux",
+    ALS_CALI_DIR "green_max_lux",
+    ALS_CALI_DIR "blue_max_lux",
+    ALS_CALI_DIR "white_max_lux",
 };
 
-}  // anonymous namespace
+struct als_config {
+    bool hbr;
+    float rgbw_max_lux[4];
+    float rgbw_max_lux_div[4];
+    float rgbw_lux_postmul[4];
+    float rgbw_poly[4][4];
+    float grayscale_weights[3];
+    float sensor_gaincal_points[4];
+    float sensor_inverse_gain[4];
+    float agc_threshold;
+    float calib_gain;
+    float bias;
+    float max_brightness;
+};
 
-bool AlsCorrection::loadFusionLightConfig() {
-    std::ifstream ifs(kFusionLightJson);
-    if (!ifs.is_open()) {
-        LOG(ERROR) << "Failed to open " << kFusionLightJson;
-        return false;
-    }
+static struct {
+    float middle;
+    float min, max;
+} hysteresis_ranges[] = {
+    { 0, 0, 4 },
+    { 7, 1, 12 },
+    { 15, 5, 30 },
+    { 30, 10, 50 },
+    { 360, 25, 700 },
+    { 1200, 300, 1600 },
+    { 2250, 1000, 2940 },
+    { 4600, 2000, 5900 },
+    { 10000, 4000, 80000 },
+    { HUGE_VALF, 8000, HUGE_VALF },
+};
 
-    Json::CharReaderBuilder rbuilder;
-    rbuilder["collectComments"] = false;
-    std::string errs;
-    Json::Value doc;
+static struct {
+    nsecs_t last_update, last_forced_update;
+    bool force_update;
+    float hyst_min, hyst_max;
+    float last_corrected_value;
+    float last_agc_gain;
+} state = {
+    .last_update = 0,
+    .force_update = true,
+    .hyst_min = -1.0, .hyst_max = -1.0,
+    .last_agc_gain = 0.0,
+};
 
-    if (!Json::parseFromStream(rbuilder, ifs, &doc, &errs)) {
-        LOG(ERROR) << "JSON parse error: " << errs;
-        return false;
-    }
+static als_config conf;
+static std::shared_ptr<IAreaCapture> service;
 
-    // Parse CommonConfig
-    {
-        const Json::Value& cc = doc["CommonConfig"];
-        const Json::Value& rect = cc["ScreenShotRect"];
-        conf_.common = {{rect["LeftTopX"].asInt(), rect["LeftTopY"].asInt(),
-                         rect["RightBottomX"].asInt(), rect["RightBottomY"].asInt()},
-                        cc.get("BrightnessMax", 4095).asInt(),
-                        cc.get("NormalModeBrightnessMax", 3332).asInt(),
-                        cc.get("FusionRGBSupported", true).asBool()};
-    }
+template <typename T>
+static T get(const std::string& path, const T& def) {
+    std::ifstream file(path);
+    T result;
 
-    // Parse CCT leakage
-    {
-        const Json::Value& arr = doc["CCTSegmentRange"];
-        conf_.cct_segments.resize(arr.size());
-        for (const Json::Value& item : arr) {
-            int level = item["Level"].asInt();
-            conf_.cct_segments[level] = {item["LuxMin"].asInt(), item["LuxMax"].asInt(),
-                                         item["CCTMaxLeakRatioThreshold"].asFloat(),
-                                         item["CCTLeakRatioThreshold"].asFloat()};
-        }
-    }
-
-    // Parse pure color params
-    {
-        const Json::Value& arr = doc["CCTSegmentPureColorParameter"];
-        for (const Json::Value& item : arr) {
-            int level = item["Level"].asInt();
-            for (const Json::Value& col : item["CCTPureColorParameter"]) {
-                auto name = col["PureColorName"].asString();
-                if (name == "SPECIAL_PICTURE") {
-                    // TODO: properly handle SPECIAL_PICTURE if needed
-                    continue;
-                }
-                conf_.cct_segments[level].pure_colors.emplace_back(
-                        col["PureColorId"].asInt(), std::move(name),
-                        col["GreyScaleDeltaThreshold"].asInt(), col["LeakRatioMin"].asFloat(),
-                        col["LeakRatioMax"].asFloat());
-            }
-        }
-    }
-
-    std::string info("Loaded " + std::to_string(conf_.cct_segments.size()) + " CCT leak segments:");
-    for (const auto& seg : conf_.cct_segments) {
-        StringAppendF(&info, "  Seg: lux %d-%d, leak thresh %.3f-%.3f, %zu pure colors",
-                      seg.lux_min, seg.lux_max, seg.leak_ratio_threshold,
-                      seg.max_leak_ratio_threshold, seg.pure_colors.size());
-    }
-    LOG(INFO) << info;
-
-    // Parse IRThreshold
-    {
-        const Json::Value& arr =
-                doc.isMember("IRThreshold") ? doc["IRThreshold"] : doc["IRThreshold_V2_1"];
-        conf_.ir_thresholds.resize(arr.size());
-        for (const Json::Value& item : arr) {
-            int level = item["Level"].asInt();
-            conf_.ir_thresholds[level] = {item["IR_Ratio_Min"].asFloat(),
-                                          item["IR_Ratio_Max"].asFloat()};
-        }
-    }
-
-    // Parse IRBrightness
-    {
-        auto res = ParseBrightnessRanges(doc.isMember("IRBrightness") ? doc["IRBrightness"]
-                                                                      : doc["IRBrightness_V2_1"]);
-        std::move(res.begin(), res.end(), std::back_inserter(conf_.ir_brightness));
-    }
-
-    // Parse LuxCoeffLIR
-    {
-        auto res = ParseLuxCoeff(doc.isMember("LuxCoeffLIR") ? doc["LuxCoeffLIR"]
-                                                             : doc["LuxCoeffLIR_V2_1"]);
-        std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_lir));
-    }
-
-    // Parse LuxCoeffHIR
-    {
-        auto res = ParseLuxCoeff(doc.isMember("LuxCoeffHIR") ? doc["LuxCoeffHIR"]
-                                                             : doc["LuxCoeffHIR_V2_1"]);
-        std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_hir));
-    }
-
-    // Parse LuxCoeffSuperHIR
-    {
-        auto res = ParseLuxCoeff(doc.isMember("LuxCoeffSuperHIR") ? doc["LuxCoeffSuperHIR"]
-                                                                  : doc["LuxCoeffSuperHIR_V2_1"]);
-        std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_super_hir));
-    }
-
-    // Parse LinearityBrightnessRange
-    {
-        auto res = ParseBrightnessRanges(doc["LinearityBrightnessRange"]);
-        std::move(res.begin(), res.end(), std::back_inserter(conf_.linearity_ranges));
-    }
-
-    // Parse Linearity
-    {
-        if (doc.isMember("Linearity")) {
-            const Json::Value& arr = doc["Linearity"];
-            conf_.linearity.resize(arr.size());
-            for (const Json::Value& item : arr) {
-                int function = item["Function"].asInt();
-                for (const Json::Value& p : item["LinearityParameter"]) {
-                    int ch = p["Channel"].asInt();
-                    conf_.linearity[function].channels[ch] = {
-                            ParseFloat(p["Parameter0"]), ParseFloat(p["Parameter1"]),
-                            ParseFloat(p["Parameter2"]), ParseFloat(p["Parameter3"])};
-                };
-            }
-        } else if (doc.isMember("LinearityCompensation")) {
-            const Json::Value& arr = doc["LinearityCompensation"];
-            for (const Json::Value& item : arr) {
-                int ch = item["channel"].asInt();
-                const Json::Value& params = item["Parameter"];
-                conf_.linearity.resize(params.size());
-                for (const Json::Value& p : params) {
-                    int level = p["level"].asInt();
-                    conf_.linearity[level].channels[ch] = {
-                            ParseFloat(p["Parameter0"]), ParseFloat(p["Parameter1"]),
-                            ParseFloat(p["Parameter2"]), ParseFloat(p["Parameter3"])};
-                }
-            }
-        } else {
-            LOG(ERROR) << "No Linearity or LinearityCompensation found in config";
-            return false;
-        }
-
-        // sanity check
-        if (conf_.linearity_ranges.size() != conf_.linearity.size()) {
-            LOG(ERROR) << "Linearity size and range mismatch";
-            return false;
-        }
-    }
-
-    // Parse Golden
-    {
-        if (doc.isMember("Golden")) {
-            auto res = ParseGolden(doc["Golden"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.golden));
-        } else if (doc.isMember("LightLeakageGolden")) {
-            const Json::Value& arr = doc["LightLeakageGolden"];
-            if (conf_.linearity_ranges.size() != arr.size()) {
-                LOG(ERROR) << "LightLeakageGolden size and range mismatch";
-                return false;
-            }
-            conf_.light_leakage_golden.resize(arr.size());
-            for (const Json::Value& item : arr) {
-                int level = item["level"].asInt();
-                conf_.light_leakage_golden[level] = {
-                        ParseInt(item["RGolden"]), ParseInt(item["GGolden"]),
-                        ParseInt(item["BGolden"]), ParseInt(item["CGolden"])};
-            }
-        } else {
-            LOG(ERROR) << "No Golden or LightLeakageGolden found in config";
-            return false;
-        }
-    }
-
-    // Parse GreyScale (optional)
-    {
-        const Json::Value& arr = doc["GreyScale"];
-        if (!arr.isNull()) {
-            auto res = ParseGreyScale(arr);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.greyscale));
-        }
-    }
-
-    // Check for L_ mode (optional)
-    if (doc.isMember("L_IRBrightness")) {
-        {
-            auto res = ParseBrightnessRanges(doc["L_IRBrightness"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.ir_brightness));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["L_LuxCoeffLIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_lir));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["L_LuxCoeffHIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_hir));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["L_LuxCoeffSuperHIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_super_hir));
-        }
-        {
-            auto res = ParseGolden(doc["L_Golden"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.golden));
-        }
-        if (!conf_.greyscale.empty()) {
-            auto res = ParseGreyScale(doc["L_GreyScale"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.greyscale));
-        }
-    }
-
-    // Check for M_ mode (optional)
-    if (doc.isMember("M_IRBrightness")) {
-        {
-            auto res = ParseBrightnessRanges(doc["M_IRBrightness"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.ir_brightness));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["M_LuxCoeffLIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_lir));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["M_LuxCoeffHIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_hir));
-        }
-        {
-            auto res = ParseLuxCoeff(doc["M_LuxCoeffSuperHIR"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.lux_coeff_super_hir));
-        }
-        {
-            auto res = ParseGolden(doc["M_Golden"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.golden));
-        }
-        if (!conf_.greyscale.empty()) {
-            auto res = ParseGreyScale(doc["M_GreyScale"]);
-            std::move(res.begin(), res.end(), std::back_inserter(conf_.greyscale));
-        }
-    }
-
-    LOG(INFO) << StringPrintf(
-            "FusionLight config loaded: brightness_max=%d, Screenshot location: (%d,%d) to (%d,%d)",
-            conf_.common.brightness_max, conf_.common.screenshot_rect.left_top_x,
-            conf_.common.screenshot_rect.left_top_y, conf_.common.screenshot_rect.right_bottom_x,
-            conf_.common.screenshot_rect.right_bottom_y);
-
-    return true;
+    file >> result;
+    return file.fail() ? def : result;
 }
 
-float AlsCorrection::applyLinearityCorrection(float x, int linearity_level, int channel) {
-    // Apply cubic polynomial: p3*x³ + p2*x² + p1*x + p0
-    const LinearityParams& params = conf_.linearity[linearity_level].channels[channel];
-    return params.p3 * x * x * x + params.p2 * x * x + params.p1 * x + params.p0;
-}
+void AlsCorrection::init() {
+    std::istringstream is;
 
-bool AlsCorrection::init() {
-    if (!loadFusionLightConfig()) {
-        LOG(ERROR) << "Failed to load fusionlight.json config";
-        return false;
+    conf.hbr = GetBoolProperty("vendor.sensors.als_correction.hbr", false);
+    conf.bias = GetIntProperty("vendor.sensors.als_correction.bias", 0);
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.rgbw_max_lux_div", ""));
+    is >> conf.rgbw_max_lux_div[0] >> conf.rgbw_max_lux_div[1]
+        >> conf.rgbw_max_lux_div[2] >> conf.rgbw_max_lux_div[3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.rgbw_poly1", ""));
+    is >> conf.rgbw_poly[0][0] >> conf.rgbw_poly[0][1]
+        >> conf.rgbw_poly[0][2] >> conf.rgbw_poly[0][3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.rgbw_poly2", ""));
+    is >> conf.rgbw_poly[1][0] >> conf.rgbw_poly[1][1]
+        >> conf.rgbw_poly[1][2] >> conf.rgbw_poly[1][3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.rgbw_poly3", ""));
+    is >> conf.rgbw_poly[2][0] >> conf.rgbw_poly[2][1]
+        >> conf.rgbw_poly[2][2] >> conf.rgbw_poly[2][3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.rgbw_poly4", ""));
+    is >> conf.rgbw_poly[3][0] >> conf.rgbw_poly[3][1]
+        >> conf.rgbw_poly[3][2] >> conf.rgbw_poly[3][3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.grayscale_weights", ""));
+    is >> conf.grayscale_weights[0] >> conf.grayscale_weights[1] >> conf.grayscale_weights[2];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.sensor_gaincal_points", ""));
+    is >> conf.sensor_gaincal_points[0] >> conf.sensor_gaincal_points[1]
+        >> conf.sensor_gaincal_points[2] >> conf.sensor_gaincal_points[3];
+    is = std::istringstream(GetProperty("vendor.sensors.als_correction.sensor_inverse_gain", ""));
+    is >> conf.sensor_inverse_gain[0] >> conf.sensor_inverse_gain[1]
+        >> conf.sensor_inverse_gain[2] >> conf.sensor_inverse_gain[3];
+
+    float rgbw_acc = 0.0;
+    for (int i = 0; i < 4; i++) {
+        float max_lux = get(rgbw_max_lux_paths[i], 0.0);
+        if (max_lux != 0.0) {
+            conf.rgbw_max_lux[i] = max_lux;
+        }
+        if (i < 3) {
+            rgbw_acc += conf.rgbw_max_lux[i];
+            conf.rgbw_lux_postmul[i] = conf.rgbw_max_lux[i] / conf.rgbw_max_lux_div[i];
+        } else {
+            rgbw_acc -= conf.rgbw_max_lux[i];
+            conf.rgbw_lux_postmul[i] = rgbw_acc / conf.rgbw_max_lux_div[i];
+        }
     }
+    ALOGI("Display maximums: R=%.0f G=%.0f B=%.0f W=%.0f",
+        conf.rgbw_max_lux[0], conf.rgbw_max_lux[1],
+        conf.rgbw_max_lux[2], conf.rgbw_max_lux[3]);
 
-    float calib_factor = 1.0f;
-
-    for (auto& range : hysteresis_ranges_) {
-        range.min *= calib_factor;
-        range.max *= calib_factor;
+    float row_coe = get(ALS_CALI_DIR "row_coe", 0.0);
+    if (row_coe != 0.0) {
+        conf.sensor_inverse_gain[0] = row_coe / 1000.0;
     }
-    hysteresis_ranges_[0].min = -1.0;
+    conf.agc_threshold = 800.0 / conf.sensor_inverse_gain[0];
 
-    LOG(INFO) << "ALS correction initialized with calib_factor=" << calib_factor;
+    float cali_coe = get(ALS_CALI_DIR "cali_coe", 0.0);
+    conf.calib_gain = cali_coe > 0.0 ? cali_coe / 1000.0 : 1.0;
+    ALOGI("Calibrated sensor gain: %.2fx", 1.0 / (conf.calib_gain * conf.sensor_inverse_gain[0]));
 
-    // Initialize capture service
+    conf.max_brightness = get(BRIGHTNESS_DIR "max_brightness", 1023.0);
+
+    for (auto& range : hysteresis_ranges) {
+        range.min /= conf.calib_gain * conf.sensor_inverse_gain[0];
+        range.max /= conf.calib_gain * conf.sensor_inverse_gain[0];
+    }
+    hysteresis_ranges[0].min = -1.0;
+
     const auto instancename = std::string(IAreaCapture::descriptor) + "/default";
-    if (AServiceManager_isDeclared(instancename.c_str())) {
-        service_ = IAreaCapture::fromBinder(
-                ::ndk::SpAIBinder(AServiceManager_waitForService(instancename.c_str())));
-    } else {
-        LOG(WARNING) << "IAreaCapture service not registered, screen correction will be limited";
-    }
 
-    return true;
+    if (AServiceManager_isDeclared(instancename.c_str())) {
+        service = IAreaCapture::fromBinder(::ndk::SpAIBinder(
+            AServiceManager_waitForService(instancename.c_str())));
+    } else {
+        ALOGE("Service is not registered");
+    }
 }
 
-float AlsCorrection::process(const Event& event) {
-    LOG(VERBOSE) << "Raw sensor reading: " << event.u.scalar;
+float AlsCorrection::process(Event& event) {
+    static AreaRgbCaptureResult screenshot = { 0.0, 0.0, 0.0 };
 
-    std::string buf;
-    int brightness = 0;
-    if (ReadFileToString(kBrightnessPath, &buf, true))
-        brightness = std::stoi(buf);
-    else
-        LOG(ERROR) << "Failed to read screen brightness, assuming 0";
+    ALOGV("Raw sensor reading: %.0f", event.u.scalar);
 
-    if (last_update_ == 0) {
-        last_update_ = event.timestamp;
-        last_forced_update_ = event.timestamp;
-        force_update_ = true;
+    if (event.u.scalar > conf.bias) {
+        event.u.scalar -= conf.bias;
+    }
+
+    nsecs_t now = systemTime(SYSTEM_TIME_BOOTTIME);
+    float brightness = get(BRIGHTNESS_DIR "brightness", 0.0);
+
+    if (state.last_update == 0) {
+        state.last_update = now;
+        state.last_forced_update = now;
     } else {
-        if (brightness > 0 && (event.timestamp - last_forced_update_) > s2ns(3)) {
-            LOG(VERBOSE) << "Forcing screenshot";
-            last_forced_update_ = event.timestamp;
-            force_update_ = true;
+        if (brightness > 0.0 && (now - state.last_forced_update) > s2ns(3)) {
+            ALOGV("Forcing screenshot");
+            state.last_forced_update = now;
+            state.force_update = true;
         }
-        if ((event.timestamp - last_update_) < ms2ns(100)) {
-            LOG(WARNING) << "Events coming too fast, dropping";
+        if ((now - state.last_update) < ms2ns(100)) {
+            ALOGV("Events coming too fast, dropping");
             return -1.f;
         }
-        last_update_ = event.timestamp;
+        state.last_update = now;
     }
 
-    // Assume single clear channel like original code
-    float raw_clear = event.u.scalar;
+    float sensor_raw_calibrated = event.u.scalar * conf.calib_gain * state.last_agc_gain;
+    if (state.force_update
+            || ((event.u.scalar < state.hyst_min || event.u.scalar > state.hyst_max)
+                && (sensor_raw_calibrated < 10.0 || sensor_raw_calibrated > (5.0 / .07)))) {
 
-    // Find appropriate linearity function based on brightness. Both open and closed intervals are
-    // observed on shipped devices, so we need to handle both cases.
-    auto it_lin_range = std::find_if(
-            conf_.linearity_ranges.begin(), conf_.linearity_ranges.end(),
-            [&](const auto& r) { return brightness >= r.bright_min && brightness < r.bright_max; });
-    if (it_lin_range == conf_.linearity_ranges.end()) {
-        it_lin_range = std::find_if(
-                conf_.linearity_ranges.begin(), conf_.linearity_ranges.end(), [&](const auto& r) {
-                    return brightness >= r.bright_min && brightness <= r.bright_max;
-                });
-        if (it_lin_range == conf_.linearity_ranges.end()) {
-            return raw_clear;
-        };
-    };
-    int linearity_level = std::distance(conf_.linearity_ranges.begin(), it_lin_range);
-
-    // Apply linearity correction to clear channel (channel 3 = C/White)
-    float corrected_clear = applyLinearityCorrection(raw_clear, linearity_level, 3);
-    LOG(VERBOSE) << "Linearity corrected clear: " << corrected_clear;
-
-    // Determine IR level (use brightness-based for now since we don't have true IR ratio)
-    auto it_ir_range = std::find_if(
-            conf_.ir_brightness.begin(), conf_.ir_brightness.end(),
-            [&](const auto& r) { return brightness >= r.bright_min && brightness < r.bright_max; });
-    if (it_ir_range == conf_.ir_brightness.end()) {
-        return raw_clear;
-    };
-    int ir_level = std::distance(conf_.ir_brightness.begin(), it_ir_range);
-
-    // Select appropriate lux coefficients
-    // Without true IR ratio, default to LIR for indoor, HIR for outdoor brightness levels
-    const auto& lux_coeff = [&]() -> auto& {
-        if (brightness < 2000) {
-            LOG(VERBOSE) << "Using LIR coefficients (indoor brightness)";
-            return conf_.lux_coeff_lir;
-        } else if (brightness < 3000) {
-            LOG(VERBOSE) << "Using HIR coefficients (mid brightness)";
-            return conf_.lux_coeff_hir;
-        } else {
-            LOG(VERBOSE) << "Using SuperHIR coefficients (outdoor brightness)";
-            return conf_.lux_coeff_super_hir;
+        if (service == nullptr || !service->getAreaBrightness(&screenshot).isOk()) {
+            ALOGE("Could not get area above sensor");
+            // TODO figure out a better way to drop events
+            event.sensorHandle = 0;
+            return -1.f;
         }
-    }();
 
-    // Calculate lux from corrected clear channel
-    // Since we don't have separate RGB, use clear channel with C coefficient
-    float calculated_lux = corrected_clear * lux_coeff[ir_level].c;
-
-    LOG(VERBOSE) << "IR level: " << ir_level << ", Calculated lux: " << calculated_lux;
-
-    // Apply screen brightness correction if needed
-    float final_lux = calculated_lux;
-    float brightness_fullwhite = 0.0f;
-
-    if (service_ != nullptr && brightness > 0 &&
-        (force_update_ || (calculated_lux < hyst_min_ || calculated_lux > hyst_max_))) {
-        AreaRgbCaptureResult screenshot;
-        if (service_->getAreaBrightness(conf_.common.screenshot_rect.left_top_x,
-                                        conf_.common.screenshot_rect.left_top_y,
-                                        conf_.common.screenshot_rect.right_bottom_x,
-                                        conf_.common.screenshot_rect.right_bottom_y, &screenshot)
-                    .isOk()) {
-            if (screenshot.r + screenshot.g + screenshot.b > 0) {
-                LOG(VERBOSE) << "Screen color above sensor: " << screenshot.r << ", "
-                             << screenshot.g << ", " << screenshot.b;
-
-                float lin_r = SrgbToLinear(screenshot.r);
-                float lin_g = SrgbToLinear(screenshot.g);
-                float lin_b = SrgbToLinear(screenshot.b);
-
-                // Check if this is grey/white
-                float rgb_delta = std::max({std::abs(screenshot.r - screenshot.g),
-                                            std::abs(screenshot.g - screenshot.b),
-                                            std::abs(screenshot.b - screenshot.r)});
-
-                float luminance;
-                if (!conf_.greyscale.empty()) {
-                    luminance = lin_r * conf_.greyscale[ir_level].r +
-                                lin_g * conf_.greyscale[ir_level].g +
-                                lin_b * conf_.greyscale[ir_level].b;
-                } else {
-                    luminance = lin_r * 0.2126f + lin_g * 0.7152f + lin_b * 0.0722f;
-                }
-
-                // Estimate screen brightness contribution
-                float brightness_ratio =
-                        static_cast<float>(brightness) / conf_.common.brightness_max;
-                float golden_scale = (conf_.light_leakage_golden.empty()
-                                              ? conf_.golden[3].w
-                                              : conf_.light_leakage_golden[linearity_level].w) /
-                                     1000.0f;
-                float base_contrib = luminance * brightness_ratio * golden_scale;
-
-                // Apply segment-specific leakage boost if color detected
-                float leak_boost = 1.0f;
-                // Find appropriate CCT segment based on calculated_lux
-                auto active_segment = std::find_if(
-                        conf_.cct_segments.begin(), conf_.cct_segments.end(),
-                        [&](const CCTSegment& seg) {
-                            // For very low ambient (pitch black room), bias toward segment 0
-                            // threshold detection Use segment if calculated_lux is within 10 lux of
-                            // min (helps catch edge cases)
-                            int min_threshold = std::max(0, seg.lux_min - 10);
-                            return calculated_lux >= min_threshold && calculated_lux <= seg.lux_max;
-                        });
-                if (active_segment != conf_.cct_segments.end()) {
-                    LOG(VERBOSE) << StringPrintf("Selected CCT segment for lux %.2f (range %d-%d)",
-                                                 calculated_lux, active_segment->lux_min,
-                                                 active_segment->lux_max);
-                    // Check if this qualifies as GREY_SCREEN or WHITE_BLACK_SCREEN
-                    for (const auto& pc : active_segment->pure_colors) {
-                        // Match grey/white screens
-                        if ((pc.color_name == "GREY_SCREEN" || pc.color_name == "GREYSCREEN" ||
-                             pc.color_name == "WHITE_BLACK_SCREEN" ||
-                             pc.color_name == "WHITEBLACKSCREEN") &&
-                            rgb_delta <= pc.grey_scale_delta_threshold) {
-                            // Calculate leak ratio proxy: luminance * brightness as fraction of
-                            // max leak
-                            float leak_proxy = luminance * brightness_ratio;
-                            float seg_leak_thresh = active_segment->leak_ratio_threshold;
-                            float seg_leak_max = active_segment->max_leak_ratio_threshold;
-                            // Lower threshold for dark room detection - be more aggressive
-                            float dark_room_thresh = seg_leak_thresh * 0.75f;  // Trigger earlier
-
-                            if (leak_proxy >= dark_room_thresh && pc.leak_ratio_max > 0.0f) {
-                                // Map leak_proxy to boost
-                                float t = (seg_leak_max > seg_leak_thresh)
-                                                  ? (leak_proxy - dark_room_thresh) /
-                                                            (seg_leak_max - dark_room_thresh)
-                                                  : 0.0f;
-                                t = std::min(std::max(t, 0.0f), 1.0f);
-                                leak_boost = 1.0f + t * (pc.leak_ratio_max - 1.0f);
-
-                                LOG(VERBOSE) << StringPrintf(
-                                        "CCT leak boost: color=%s, rgb_delta=%.1f, "
-                                        "leak_proxy=%.3f, boost=%.2f",
-                                        pc.color_name.c_str(), rgb_delta, leak_proxy, leak_boost);
-                                break;
-                            }
-                        }
-                    }
-                } else {
-                    // No segment matched - very low ambient, apply conservative fallback boost
-                    if (calculated_lux < 30.0f && rgb_delta <= 36 && luminance > 0.75f) {
-                        leak_boost = 1.5f;
-                        LOG(VERBOSE) << "Fallback dark room boost applied: " << leak_boost;
-                    }
-                }
-                // Final screen contribution with leakage boost
-                float screen_lux_contrib = base_contrib * leak_boost;
-                brightness_fullwhite = brightness_ratio * golden_scale * leak_boost;
-
-                // Ensure minimum subtraction in pitch black + white scenario
-                if (calculated_lux < 50.0f && luminance > 0.70f) {
-                    screen_lux_contrib = std::max(screen_lux_contrib, base_contrib * 1.8f);
-                }
-
-                // Subtract screen contribution
-                final_lux = std::max(calculated_lux - screen_lux_contrib, 0.0f);
-
-                LOG(VERBOSE) << StringPrintf(
-                        "Screen: base=%.2f, boost=%.2f, contrib=%.2f lux, fullwhite=%.2f, "
-                        "final=%.2f",
-                        base_contrib, leak_boost, screen_lux_contrib, brightness_fullwhite,
-                        final_lux);
-            } else {
-                // Black screen, no correction needed
-                LOG(VERBOSE) << "Black screen, no correction";
+        ALOGV("Screen color above sensor: %f %f %f", screenshot.r, screenshot.g, screenshot.b);
+        float rgbw[4] = {
+            screenshot.r, screenshot.g, screenshot.b,
+            screenshot.r * conf.grayscale_weights[0]
+                + screenshot.g * conf.grayscale_weights[1]
+                + screenshot.b * conf.grayscale_weights[2]
+        };
+        float cumulative_correction = 0.0;
+        for (int i = 0; i < 4; i++) {
+            float corr = 0.0;
+            for (float coef : conf.rgbw_poly[i]) {
+                corr *= rgbw[i];
+                corr += coef;
             }
+            corr *= conf.rgbw_lux_postmul[i];
+            if (i < 3) {
+                cumulative_correction += std::max(corr, 0.0f);
+            } else {
+                cumulative_correction -= corr;
+            }
+        }
+        cumulative_correction *= brightness / conf.max_brightness;
+        float brightness_fullwhite = conf.rgbw_max_lux[3] * brightness / conf.max_brightness;
+        float brightness_grayscale_gamma = std::pow(rgbw[3] / 255.0, 2.2) * brightness_fullwhite;
+        cumulative_correction = std::min(cumulative_correction, brightness_fullwhite);
+        cumulative_correction = std::max(cumulative_correction, brightness_grayscale_gamma);
+        ALOGV("Estimated screen brightness: %.0f", cumulative_correction);
 
-            // Update hysteresis range
-            for (auto& range : hysteresis_ranges_) {
-                if (final_lux <= range.middle) {
-                    hyst_min_ = range.min;
-                    hyst_max_ = range.max + brightness_fullwhite;
+        float sensor_raw_corrected = std::max(event.u.scalar - cumulative_correction, 0.0f);
+
+        float agc_gain = conf.sensor_inverse_gain[0];
+        if (sensor_raw_corrected > conf.agc_threshold) {
+            float gain_estimate = 0;
+            if (conf.hbr) {
+                gain_estimate = event.u.data[2] * 1000.0 / sensor_raw_corrected;
+            } else {
+                gain_estimate = sensor_raw_corrected / event.u.data[2];
+            }
+            for (int i = 0; i < 4; i++) {
+                if (gain_estimate > conf.sensor_gaincal_points[i]) {
+                    agc_gain = conf.sensor_inverse_gain[i];
+                }
+            }
+        }
+        ALOGV("AGC gain: %f", agc_gain);
+
+        if (cumulative_correction <= event.u.scalar * 1.35
+                || event.u.scalar * conf.calib_gain * agc_gain < 10000.0
+                || state.force_update) {
+            float sensor_corrected = sensor_raw_corrected * conf.calib_gain * agc_gain;
+            state.last_agc_gain = agc_gain;
+            for (auto& range : hysteresis_ranges) {
+                if (sensor_corrected <= range.middle) {
+                    state.hyst_min = range.min;
+                    state.hyst_max = range.max + brightness_fullwhite;
                     break;
                 }
             }
-
-            force_update_ = false;
-            last_corrected_value_ = final_lux;
+            sensor_corrected = std::max(sensor_corrected - 14.0, 0.0);
+            event.u.scalar = sensor_corrected;
+            state.last_corrected_value = sensor_corrected;
+            ALOGV("Fully corrected sensor value: %.0f lux", sensor_corrected);
+            return sensor_corrected;
         } else {
-            LOG(VERBOSE) << "Failed to get screen brightness, using calculated lux";
-            last_corrected_value_ = calculated_lux;
+            event.u.scalar = state.last_corrected_value;
+            ALOGV("Reusing cached value: %.0f lux", event.u.scalar);
         }
-    } else if (calculated_lux >= hyst_min_ && calculated_lux <= hyst_max_) {
-        // Within hysteresis range, use cached value for stability
-        final_lux = last_corrected_value_;
-        LOG(VERBOSE) << StringPrintf("Within hysteresis (%.1f-%.1f), using cached: %.2f lux",
-                                     hyst_min_, hyst_max_, final_lux);
-    } else {
-        // Outside hysteresis but no screen update, use calculated
-        last_corrected_value_ = calculated_lux;
-        final_lux = calculated_lux;
-    }
 
-    LOG(VERBOSE) << "Final corrected lux: " << final_lux;
-    return final_lux;
+        state.force_update = false;
+    } else {
+        event.u.scalar = state.last_corrected_value;
+        ALOGV("Reusing cached value: %.0f lux", event.u.scalar);
+    }
+    return state.last_corrected_value;
 }
 
-}  // namespace wrapper
 }  // namespace implementation
-}  // namespace subhal
 }  // namespace V2_1
 }  // namespace sensors
 }  // namespace hardware
