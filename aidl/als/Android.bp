@@ -18,6 +18,7 @@ cc_binary {
         "libbinder",
         "libbinder_ndk",
         "libgui",
+        "liblog",
         "libui",
         "libutils",
         "vendor.lineage.oplus_als-V1-ndk",
