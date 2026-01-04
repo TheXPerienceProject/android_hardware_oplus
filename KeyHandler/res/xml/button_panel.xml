@@ -11,7 +11,7 @@
         android:summary="%s"
         android:entries="@array/alert_slider_action_entries"
         android:entryValues="@array/alert_slider_action_entry_values"
-        android:defaultValue="0" />
+        android:defaultValue="2" />
 
     <ListPreference
         android:key="config_middle_position"
@@ -29,7 +29,7 @@
         android:summary="%s"
         android:entries="@array/alert_slider_action_entries"
         android:entryValues="@array/alert_slider_action_entry_values"
-        android:defaultValue="2" />
+        android:defaultValue="0" />
 
     <SwitchPreferenceCompat
         android:key="config_zen_keep"
