@@ -99,6 +99,10 @@ aidl_interface {
             version: "9",
             imports: [],
         },
+        {
+            version: "10",
+            imports: [],
+        },
     ],
 }
 
