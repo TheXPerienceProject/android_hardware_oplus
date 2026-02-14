@@ -26,12 +26,12 @@ using android::sp;
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
 
-using vendor::xperience::touch::V1_0::IGloveMode;
-using vendor::xperience::touch::V1_0::IHighTouchPollingRate;
-using vendor::xperience::touch::V1_0::ITouchscreenGesture;
-using vendor::xperience::touch::V1_0::implementation::GloveMode;
-using vendor::xperience::touch::V1_0::implementation::HighTouchPollingRate;
-using vendor::xperience::touch::V1_0::implementation::TouchscreenGesture;
+using vendor::lineage::touch::V1_0::IGloveMode;
+using vendor::lineage::touch::V1_0::IHighTouchPollingRate;
+using vendor::lineage::touch::V1_0::ITouchscreenGesture;
+using vendor::lineage::touch::V1_0::implementation::GloveMode;
+using vendor::lineage::touch::V1_0::implementation::HighTouchPollingRate;
+using vendor::lineage::touch::V1_0::implementation::TouchscreenGesture;
 
 int main() {
     sp<IGloveMode> gloveMode = new GloveMode();

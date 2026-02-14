@@ -40,7 +40,7 @@ constexpr const char* kPrimaryHighRatePath = kHighRatePath0;
 }  // anonymous namespace
 
 namespace vendor {
-namespace xperience {
+namespace lineage {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -75,5 +75,5 @@ Return<bool> HighTouchPollingRate::setEnabled(bool enabled) {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace xperience
+}  // namespace lineage
 }  // namespace vendor

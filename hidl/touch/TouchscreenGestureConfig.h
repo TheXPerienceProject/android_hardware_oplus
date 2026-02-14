@@ -19,7 +19,7 @@
 #include "TouchscreenGesture.h"
 
 namespace vendor {
-namespace xperience {
+namespace lineage {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -32,5 +32,5 @@ const int TouchscreenGesture::kSupportedGestures = makeBitField(
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace xperience
+}  // namespace lineage
 }  // namespace vendor

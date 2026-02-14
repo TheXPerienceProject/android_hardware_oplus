@@ -28,7 +28,7 @@ constexpr const char* kGloveModePaths[] = {
 }//anonymous namespace
 
 namespace vendor {
-namespace xperience {
+namespace lineage {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -73,5 +73,5 @@ Return<bool> GloveMode::setEnabled(bool enabled) {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace xperience
+}  // namespace lineage
 }  // namespace vendor

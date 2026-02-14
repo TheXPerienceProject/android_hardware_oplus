@@ -28,7 +28,7 @@ using ::android::base::Trim;
 namespace {}  // anonymous namespace
 
 namespace vendor {
-namespace xperience {
+namespace lineage {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -79,5 +79,5 @@ Return<bool> TouchscreenGesture::setGestureEnabled(const Gesture& gesture, bool 
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace xperience
+}  // namespace lineage
 }  // namespace vendor

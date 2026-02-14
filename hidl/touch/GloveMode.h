@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include <vendor/xperience/touch/1.0/IGloveMode.h>
+#include <vendor/lineage/touch/1.0/IGloveMode.h>
 
 namespace vendor {
-namespace xperience {
+namespace lineage {
 namespace touch {
 namespace V1_0 {
 namespace implementation {
@@ -17,7 +17,7 @@ using ::android::hardware::Return;
 
 class GloveMode : public IGloveMode {
   public:
-    // Methods from ::vendor::xperience::touch::V1_0::IGloveMode follow.
+    // Methods from ::vendor::lineage::touch::V1_0::IGloveMode follow.
     Return<bool> isEnabled() override;
     Return<bool> setEnabled(bool enabled) override;
 };
@@ -25,5 +25,5 @@ class GloveMode : public IGloveMode {
 }  // namespace implementation
 }  // namespace V1_0
 }  // namespace touch
-}  // namespace xperience
+}  // namespace lineage
 }  // namespace vendor
