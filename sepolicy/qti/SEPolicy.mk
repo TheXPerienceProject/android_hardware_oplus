@@ -7,26 +7,26 @@
 SEPOLICY_PLATFORM := $(subst device/qcom/sepolicy_vndr/,,$(SEPOLICY_PATH))
 
 BOARD_VENDOR_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/vendor \
-    hardware/oplus/sepolicy/qti/vendor/$(SEPOLICY_PLATFORM)
+    hardware/oplus_dodge/sepolicy/qti/vendor \
+    hardware/oplus_dodge/sepolicy/qti/vendor/$(SEPOLICY_PLATFORM)
 
 SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/private \
-    hardware/oplus/sepolicy/qti/private/$(SEPOLICY_PLATFORM)
+    hardware/oplus_dodge/sepolicy/qti/private \
+    hardware/oplus_dodge/sepolicy/qti/private/$(SEPOLICY_PLATFORM)
 
 SYSTEM_EXT_PUBLIC_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/public \
-    hardware/oplus/sepolicy/qti/public/$(SEPOLICY_PLATFORM)
+    hardware/oplus_dodge/sepolicy/qti/public \
+    hardware/oplus_dodge/sepolicy/qti/public/$(SEPOLICY_PLATFORM)
 
 ifneq ($(SEPOLICY_PLATFORM), legacy-um)
 BOARD_VENDOR_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/vendor/common-um
+    hardware/oplus_dodge/sepolicy/qti/vendor/common-um
 
 SYSTEM_EXT_PRIVATE_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/private/common-um
+    hardware/oplus_dodge/sepolicy/qti/private/common-um
 
 SYSTEM_EXT_PUBLIC_SEPOLICY_DIRS += \
-    hardware/oplus/sepolicy/qti/public/common-um
+    hardware/oplus_dodge/sepolicy/qti/public/common-um
 endif
 
 ifeq ($(TARGET_BOARD_PLATFORM),sun)
