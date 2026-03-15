@@ -201,7 +201,7 @@ float AlsCorrection::process(Event& event) {
             || ((event.u.scalar < state.hyst_min || event.u.scalar > state.hyst_max)
                 && (sensor_raw_calibrated < 10.0 || sensor_raw_calibrated > (5.0 / .07)))) {
 
-        if (service == nullptr || !service->getAreaBrightness(&screenshot).isOk()) {
+        if (service == nullptr || !service->getAreaBrightness(1010, 150, 1045, 190, &screenshot).isOk()) {
             ALOGE("Could not get area above sensor");
             // TODO figure out a better way to drop events
             event.sensorHandle = 0;
