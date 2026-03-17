@@ -32,8 +32,7 @@ endif
 ifeq ($(TARGET_BOARD_PLATFORM),pineapple)
     BOARD_SEPOLICY_M4DEFS += \
         vendor_hal_drm_widevine_exec=hal_drm_widevine_exec \
-        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec \
-        vendor_hal_perf_default=hal_perf_default
+        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec
 
     BOARD_VENDOR_SEPOLICY_DIRS += \
         hardware/oplus/sepolicy/qti/vendor/sm8650
@@ -42,8 +41,7 @@ endif
 ifeq ($(TARGET_BOARD_PLATFORM),sun)
     BOARD_SEPOLICY_M4DEFS += \
         vendor_hal_drm_widevine_exec=hal_drm_widevine_exec \
-        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec \
-        vendor_hal_perf_default=hal_perf_default
+        vendor_hal_esepowermanager_qti_exec=hal_secure_element_default_exec
 
     BOARD_VENDOR_SEPOLICY_DIRS += \
         hardware/oplus/sepolicy/qti/vendor/sm8750
