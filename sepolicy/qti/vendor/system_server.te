@@ -2,3 +2,7 @@ rw_dir_file(system_server, vendor_proc_tri_state_key)
 
 # allow system server to set dc dim node
 allow system_server sysfs_dcd:file rw_file_perms;
+
+# VOOC
+allow system_server vendor_sysfs_usb_supply:file rw_file_perms;
+
