@@ -2,3 +2,5 @@ hal_client_domain(horae, vendor_hal_oplus_charger)
 
 r_dir_file(horae, vendor_proc_oplus_version)
 rw_dir_file(horae, proc_horae)
+
+allow horae vendor_sysfs_usb_supply:dir search;
