@@ -3,3 +3,12 @@ rw_dir_file(system_server, vendor_proc_tri_state_key)
 
 # Vooc
 allow system_server vendor_sysfs_usb_supply:file rw_file_perms;
+
+# allow cachedoptimizer over oplus nodes
+allow system_server vendor_proc_charger:dir search;
+allow system_server vendor_proc_wireless:dir search;
+allow system_server vendor_proc_display:dir search;
+allow system_server vendor_proc_oplus_version:dir search;
+allow system_server vendor_proc_oppo_secure_common_file:dir search;
+allow system_server vendor_proc_display:file r_file_perms;
+
