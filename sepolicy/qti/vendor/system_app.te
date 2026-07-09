@@ -2,3 +2,8 @@
 rw_dir_file(system_app, vendor_sysfs_graphics)
 
 allow system_app vendor_sysfs_graphics:file rw_file_perms;
+
+# Allow passthrough charge interface to be adjusted by a system app
+allow system_app vendor_sysfs_usb_supply:dir r_dir_perms;
+allow system_app vendor_sysfs_usb_supply:file rw_file_perms;
+
