@@ -236,6 +236,10 @@ aidl_interface {
             version: "10",
             imports: [],
         },
+        {
+            version: "11",
+            imports: [],
+        },
     ],
 }
 
