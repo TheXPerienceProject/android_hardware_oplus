@@ -24,9 +24,6 @@ public class OplusFeatureConfigManager {
             }
             return true;
         }
-        if ("oplus.hardware.type.rear_IR".equals(name)) {
-            return true;
-        }
         return false;
     }
 
