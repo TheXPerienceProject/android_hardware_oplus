@@ -17,10 +17,7 @@ public interface IOplusCameraManager extends IOplusCommonFeature {
         CMD_PRE_CAPTURE,
         CMD_PRE_OPEN,
         CMD_PRE_EVLIST,
-        CMD_READ_MEM,
-        CMD_PRE_PRO_MANUAL_WB,
-        CMD_UI_EVENT,
-        CMD_PRE_CLOSE
+        CMD_READ_MEM
     }
 
     default OplusFeatureList.OplusIndex index() {
