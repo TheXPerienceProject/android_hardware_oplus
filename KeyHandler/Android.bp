@@ -2,7 +2,6 @@ android_app {
     name: "KeyHandler",
 
     srcs: ["src/**/*.kt"],
-    resource_dirs: ["res"],
 
     certificate: "platform",
     platform_apis: true,
@@ -14,7 +13,9 @@ android_app {
     ],
 
     optimize: {
+        optimize: true,
         proguard_flags_files: ["proguard.flags"],
+        shrink_resources: true,
     },
 }
 

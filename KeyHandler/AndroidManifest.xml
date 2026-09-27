@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-     Copyright (C) 2018, 2021-2022 The LineageOS Project
+     Copyright (C) 2018, 2021-2025 The LineageOS Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -17,17 +17,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
           android:sharedUserId="android.uid.system"
           package="org.lineageos.settings.device">
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="com.android.systemui.permission.PLUGIN" />
-    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"/>
 
-    <protected-broadcast android:name="org.lineageos.settings.device.UPDATE_SLIDER" />
     <protected-broadcast android:name="com.android.systemui.doze.pulse" />
+    <protected-broadcast android:name="org.lineageos.settings.UPDATE_SETTINGS" />
 
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/device_settings_app_name"
-        android:theme="@style/Theme.SubSettingsBase"
+        android:theme="@style/Theme.SubSettingsBase.Expressive"
         android:defaultToDeviceProtectedStorage="true"
         android:directBootAware="true">
 
@@ -46,31 +46,20 @@
         <!-- Additional button settings (Button settings) -->
         <activity
             android:name=".ButtonSettingsActivity"
-            android:label="@string/alert_slider_category_title"
+            android:label="@string/button_panel_title"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.android.settings.action.IA_SETTINGS" />
             </intent-filter>
-            <meta-data
-                android:name="com.android.settings.summary"
-                android:resource="@string/alert_slider_summary" />
             <meta-data
                 android:name="com.android.settings.icon"
                 android:resource="@drawable/ic_alter_slider" />
             <meta-data
                 android:name="com.android.settings.category"
                 android:value="com.android.settings.category.ia.system" />
-            <meta-data
-                android:name="com.android.settings.group_key"
-                android:value="device_category" />
         </activity>
 
         <service
-            android:name=".KeyHandler"
-            android:permission="KeyHandlerService"
-            android:exported="false" />
-        
-       <service
             android:name=".AlertSliderPlugin"
             android:exported="false">
             <intent-filter>
@@ -78,6 +67,9 @@
             </intent-filter>
         </service>
 
+        <service
+            android:name=".KeyHandler"
+            android:permission="KeyHandlerService"
+            android:exported="false" />
     </application>
-
 </manifest>
