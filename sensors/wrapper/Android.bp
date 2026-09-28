@@ -21,8 +21,6 @@ cc_library_shared {
     ],
     header_libs: [
         "android.hardware.sensors@2.X-multihal.header",
-        "libbinder_headers",
-        "libhardware_headers",
     ],
     cflags: [
         "-DLOG_TAG=\"sensors.wrapper\"",
