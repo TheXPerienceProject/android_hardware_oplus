@@ -7,7 +7,6 @@ cc_library_shared {
     name: "sensors.wrapper",
     defaults: ["hidl_defaults"],
     srcs: [
-        "AlsCorrection.cpp",
         "SensorsSubHal.cpp",
     ],
     shared_libs: [
@@ -19,8 +18,6 @@ cc_library_shared {
         "libhidlbase",
         "libjsoncpp",
         "libutils",
-        "liblog",
-        "vendor.lineage.oplus_als-V1-ndk",
     ],
     header_libs: [
         "android.hardware.sensors@2.X-multihal.header",
@@ -29,7 +26,7 @@ cc_library_shared {
     ],
     cflags: [
         "-DLOG_TAG=\"sensors.wrapper\"",
-    ] + select(soong_config_variable("oplus_sensors", "wrapped_lib_name"), {
+    ] + select(soong_config_variable("OPLUS_SENSORS_WRAPPER", "WRAPPED_LIB_NAME"), {
         any @ flag_val: ["-DWRAPPED_LIB_NAME=\"" + flag_val + "\""],
         default: [],
     }),
