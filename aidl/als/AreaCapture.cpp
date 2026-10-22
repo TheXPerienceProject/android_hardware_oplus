@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2021-2025 The LineageOS Project
+ * SPDX-FileCopyrightText: 2021-2024 The LineageOS Project
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -8,7 +8,10 @@
 #include <android-base/properties.h>
 #include <android/gui/SecureLayerMode.h>
 #include <gui/AidlUtil.h>
+#include <gui/SurfaceComposerClient.h>
 #include <gui/SyncScreenCaptureListener.h>
+#include <ui/DisplayState.h>
+#include <ui/PixelFormat.h>
 
 using android::DisplayCaptureArgs;
 using android::GraphicBuffer;
@@ -22,26 +25,37 @@ using android::base::GetProperty;
 using android::gui::ScreenCaptureResults;
 using android::gui::SecureLayerMode;
 using android::gui::aidl_utils::toARect;
-using android::gui::SecureLayerMode;
+using android::ui::PixelFormat;
 
 namespace aidl {
 namespace vendor {
 namespace lineage {
 namespace oplus_als {
-namespace {
+
+AreaCapture::AreaCapture() {
+    int left, top, right, bottom;
+    std::istringstream is(GetProperty("vendor.sensors.als_correction.grabrect", ""));
+
+    is >> left >> top >> right >> bottom;
+    if (left == 0) {
+        LOG_ALWAYS_FATAL("No screenshot grab area config");
+        return;
+    }
+
+    ALOGI("Screenshot grab area: %d %d %d %d", left, top, right, bottom);
+    m_screenshot_rect = Rect(left, top, right, bottom);
+}
+
 // See frameworks/base/services/core/jni/com_android_server_display_DisplayControl.cpp and
 // frameworks/base/core/java/android/view/SurfaceControl.java
-sp<IBinder> GetInternalDisplayToken() {
+sp<IBinder> AreaCapture::getInternalDisplayToken() {
     const auto displayIds = SurfaceComposerClient::getPhysicalDisplayIds();
     return SurfaceComposerClient::getPhysicalDisplayToken(displayIds[0]);
 }
-};  // anonymous namespace
 
-ndk::ScopedAStatus AreaCapture::getAreaBrightness(int32_t topX, int32_t topY, int32_t bottomX,
-                                                  int32_t bottomY,
-                                                  AreaRgbCaptureResult* _aidl_return) {
-    Rect area{topX, topY, bottomX, bottomY};
+ndk::ScopedAStatus AreaCapture::getAreaBrightness(AreaRgbCaptureResult* _aidl_return) {
     DisplayCaptureArgs displayCaptureArgs;
+    displayCaptureArgs.displayToken = getInternalDisplayToken();
     displayCaptureArgs.captureArgs.pixelFormat = ::android::PIXEL_FORMAT_RGBA_8888;
     displayCaptureArgs.captureArgs.sourceCrop = toARect(m_screenshot_rect);
     displayCaptureArgs.width = m_screenshot_rect.getWidth();
@@ -51,14 +65,14 @@ ndk::ScopedAStatus AreaCapture::getAreaBrightness(int32_t topX, int32_t topY, in
     sp<SyncScreenCaptureListener> captureListener = new SyncScreenCaptureListener();
     if (ScreenshotClient::captureDisplay(displayCaptureArgs, captureListener) !=
         ::android::NO_ERROR) {
-        LOG(ERROR) << "Capture failed";
-        return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        ALOGE("Capture failed");
+        return ndk::ScopedAStatus::fromServiceSpecificError(-1);
     }
 
     auto captureResults = captureListener->waitForResults();
     if (!captureResults.fenceResult.ok()) {
-        LOG(ERROR) << "Fence result error";
-        return ndk::ScopedAStatus::fromExceptionCode(EX_UNSUPPORTED_OPERATION);
+        ALOGE("Fence result error");
+        return ndk::ScopedAStatus::fromServiceSpecificError(-1);
     }
 
     uint8_t* out;
