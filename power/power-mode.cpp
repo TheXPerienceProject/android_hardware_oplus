@@ -4,6 +4,7 @@
  */
 
 #include <aidl/android/hardware/power/BnPower.h>
+#include <aidl/vendor/oplus/hardware/charger/ICharger.h>
 #include <aidl/vendor/oplus/hardware/touch/IOplusTouch.h>
 
 #include <android-base/logging.h>
@@ -12,6 +13,7 @@
 #include <OplusTouchConstants.h>
 
 using aidl::android::hardware::power::Mode;
+using aidl::vendor::oplus::hardware::charger::ICharger;
 using aidl::vendor::oplus::hardware::touch::IOplusTouch;
 
 #ifdef LIBPERFMGR_EXT
@@ -22,9 +24,11 @@ namespace aidl::android::hardware::power::impl {
 
 bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return) {
     switch (type) {
+#ifndef TAP_TO_WAKE_NODE
         case Mode::DOUBLE_TAP_TO_WAKE:
             *_aidl_return = true;
             return true;
+#endif
         default:
             return false;
     }
@@ -32,6 +36,7 @@ bool isDeviceSpecificModeSupported(Mode type, bool* _aidl_return) {
 
 bool setDeviceSpecificMode(Mode type, bool enabled) {
     switch (type) {
+#ifndef TAP_TO_WAKE_NODE
         case Mode::DOUBLE_TAP_TO_WAKE: {
             std::string tmp;
             int contents = 0;
@@ -59,6 +64,17 @@ bool setDeviceSpecificMode(Mode type, bool enabled) {
                                            OplusTouchConstants::DOUBLE_TAP_INDEP_NODE,
                                            std::to_string(contents), &aidl_return);
             return true;
+        }
+#endif
+        case Mode::INTERACTIVE: {
+            const std::string instance = std::string() + ICharger::descriptor + "/default";
+            std::shared_ptr<ICharger> charger = ICharger::fromBinder(
+                    ndk::SpAIBinder(AServiceManager_checkService(instance.c_str())));
+            if (charger) {
+                int aidl_return = 0;
+                charger->notifyScreenStatus(enabled, &aidl_return);
+            }
+            return false;
         }
         default:
             return false;
