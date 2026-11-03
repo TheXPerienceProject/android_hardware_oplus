@@ -4,6 +4,9 @@
 # Audio Amplifier
 /dev/aw882xx_smartpa    u:object_r:oplus_awsmartpa_device:s0
 
+# Audio
+/mnt/vendor/persist/media(/.*)?                                                 u:object_r:vendor_persist_media_file:s0
+
 # Camera
 /data/vendor/camera_update(/.*)?                                                u:object_r:vendor_camera_update_data_file:s0
 /dev/camera_extension_monitor                                                   u:object_r:vendor_camera_turbo_device:s0
