@@ -226,7 +226,7 @@
 /dev/wlchg                            u:object_r:wlchg_device:s0
 
 # Wlschgd
-/(odm|vendor/odm)/bin/hw/gauged       u:object_r:wlchgmonitor_exec:s0
+#/(odm|vendor/odm)/bin/hw/gauged       u:object_r:wlchgmonitor_exec:s0
 /(odm|vendor/odm)/bin/hw/wlschgd      u:object_r:wlschgd_exec:s0
 /dev/wls_dev                          u:object_r:wlschgd_device:s0
 
